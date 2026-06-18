@@ -1,0 +1,7 @@
+
+test_bsr_cprgmres_hybrid:193158 terminated with signal 11 at PC=7fc90d3c0180 SP=7ffd91eb0810.  Backtrace:
+/lib64/libc.so.6(fread+0x20)[0x7fc90d3c0180]
+./test_bsr_cprgmres_hybrid[0x4b83ca]
+./test_bsr_cprgmres_hybrid[0x40406a]
+/lib64/libc.so.6(__libc_start_main+0xf5)[0x7fc90d373555]
+./test_bsr_cprgmres_hybrid[0x402879]

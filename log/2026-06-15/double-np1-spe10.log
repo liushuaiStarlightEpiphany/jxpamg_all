@@ -1,0 +1,78 @@
+  running cpr-gmres with 1 MPI-processes
+
+=================================================
+Testing CPR-GMRES for BSR Matrix
+Matrix file: ./data/spe10_bsr/A_bsr_spe10.bin
+Decoupling: True-IMPES (5)
+=================================================
+
+BSR Matrix Info:
+  Block size: 2
+  Block rows: 1094422
+  Block cols: 1094422
+  Block nonzeros: 7478310
+  Scalar dimensions: 2188844 x 2188844
+
+Applying decoupling...
+  Method: True-IMPES
+  Completed in 0.096735 seconds
+  First diagonal block after decoupling:
+    3.416351e-02 3.089028e-04
+    7.801957e-02 4.240598e+01
+
+Creating CPR preconditioner...
+ 
+================================================================== 
++++++++++++++ multi-scale/AI infomation for levels +++++++++++++++ 
+CPR setup completed in 1.884196 seconds
+
+Creating GMRES solver with CPR preconditioner...
+GMRES setup completed in 0.002868 seconds
+
+Solving with CPR-GMRES (k_dim=30, max_iter=200, tol=1.0e-04)...
+Initial residual norm: 9.044238e+00
+L2 norm of b: 9.044238e+00
+Initial L2 norm of residual: 9.044238e+00
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+    1    2.095049e+00    0.231645   2.316446e-01
+    2    8.241604e-01    0.393385   9.112547e-02
+    3    3.344304e-01    0.405783   3.697718e-02
+    4    1.813452e-01    0.542251   2.005091e-02
+    5    1.169782e-01    0.645058   1.293401e-02
+    6    8.215613e-02    0.702320   9.083810e-03
+    7    6.093138e-02    0.741653   6.737039e-03
+    8    4.644730e-02    0.762289   5.135568e-03
+    9    3.662632e-02    0.788556   4.049685e-03
+   10    2.967291e-02    0.810153   3.280863e-03
+   11    2.439717e-02    0.822204   2.697537e-03
+   12    2.049460e-02    0.840040   2.266039e-03
+   13    1.690166e-02    0.824689   1.868776e-03
+   14    1.342885e-02    0.794529   1.484797e-03
+   15    1.059550e-02    0.789010   1.171519e-03
+   16    8.122984e-03    0.766645   8.981392e-04
+   17    6.425457e-03    0.791022   7.104476e-04
+   18    5.023234e-03    0.781771   5.554072e-04
+   19    4.086071e-03    0.813434   4.517872e-04
+   20    3.247976e-03    0.794890   3.591211e-04
+   21    2.569144e-03    0.790999   2.840642e-04
+   22    1.911648e-03    0.744080   2.113664e-04
+   23    1.357575e-03    0.710160   1.501038e-04
+   24    1.061868e-03    0.782180   1.174082e-04
+   25    8.255690e-04    0.777469   9.128122e-05
+
+1590,Final L2 norm of residual: 8.255690e-04
+
+ >> GMRES Precond Total: time(min,max,ave) = (75.72, 75.72, 75.72) seconds
+
+
+========= Results [True-IMPES] =========
+  Iterations: 25
+  Final residual: 8.255690e-04 (rel: 9.128122e-05)
+  Relative residual (wrt rhs): 9.128122e-05
+  Converged: YES
+  Solve time: 94.900970 s
+================================
+

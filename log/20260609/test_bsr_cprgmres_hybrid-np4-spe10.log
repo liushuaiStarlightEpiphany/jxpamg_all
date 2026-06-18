@@ -1,0 +1,180 @@
+
+=================================================
+Mixed Precision CPR-GMRES Solver
+Matrix file: ../JXPAMG-bsr/data/spe10_bsr/A_bsr_spe10.bin
+Matrix type: BSR
+Binary format: yes
+RHS file: ../JXPAMG-bsr/data/spe10_bsr/b_spe10.dat
+=================================================
+
+BSR Matrix Info (myid 0):
+  Block size: 2
+  Number of block rows: 1094422
+  Number of block cols: 1094422
+  Number of block nonzeros: 7478310
+  Scalar dimensions: 2188844 x 2188844
+Reading RHS from file: ../JXPAMG-bsr/data/spe10_bsr/b_spe10.dat
+
+Applying decoupling to serial BSR system...
+  Decoupling method: True-IMPES
+  Is thermal model: no
+  Decoupling completed in 0.078301 seconds
+  Matrix and RHS have been modified by decoupling
+  First diagonal block after decoupling:
+    3.416351e-02    3.089028e-04
+    7.801957e-02    4.240598e+01
+Low precision CPR setup completed in 0.896315 seconds
+
+Starting GMRES with mixed precision CPR preconditioner...
+Max iterations: 30, Tolerance: 1.0e-06
+Krylov subspace dimension: 30
+L2 norm of b: 9.044238e+00
+Initial L2 norm of residual: 9.044238e+00
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+CPR-MxP: Stage1 (AMG) time: 0.0000 s, Stage2 (Polish) time: 0.0000 s
+    1    2.353979e+00    0.260274   2.602739e-01
+CPR-MxP: Stage1 (AMG) time: 0.5000 s, Stage2 (Polish) time: 0.0000 s
+    2    6.365699e-01    0.270423   7.038404e-02
+CPR-MxP: Stage1 (AMG) time: 0.7500 s, Stage2 (Polish) time: 0.0000 s
+    3    3.186743e-01    0.500612   3.523506e-02
+CPR-MxP: Stage1 (AMG) time: 1.0000 s, Stage2 (Polish) time: 0.0000 s
+    4    1.783201e-01    0.559568   1.971643e-02
+CPR-MxP: Stage1 (AMG) time: 1.2500 s, Stage2 (Polish) time: 0.0000 s
+    5    1.166123e-01    0.653950   1.289355e-02
+CPR-MxP: Stage1 (AMG) time: 1.5000 s, Stage2 (Polish) time: 0.0000 s
+    6    8.261499e-02    0.708458   9.134544e-03
+CPR-MxP: Stage1 (AMG) time: 1.5000 s, Stage2 (Polish) time: 0.2500 s
+    7    6.067468e-02    0.734427   6.708656e-03
+CPR-MxP: Stage1 (AMG) time: 1.5000 s, Stage2 (Polish) time: 0.5000 s
+    8    4.637617e-02    0.764341   5.127703e-03
+CPR-MxP: Stage1 (AMG) time: 1.7500 s, Stage2 (Polish) time: 0.5000 s
+    9    3.674185e-02    0.792257   4.062460e-03
+CPR-MxP: Stage1 (AMG) time: 2.0000 s, Stage2 (Polish) time: 0.5000 s
+   10    2.952850e-02    0.803675   3.264896e-03
+CPR-MxP: Stage1 (AMG) time: 2.0000 s, Stage2 (Polish) time: 0.7500 s
+   11    2.440048e-02    0.826337   2.697904e-03
+CPR-MxP: Stage1 (AMG) time: 2.0000 s, Stage2 (Polish) time: 0.7500 s
+   12    2.030555e-02    0.832178   2.245137e-03
+CPR-MxP: Stage1 (AMG) time: 2.0000 s, Stage2 (Polish) time: 0.7500 s
+   13    1.614583e-02    0.795144   1.785206e-03
+CPR-MxP: Stage1 (AMG) time: 2.2500 s, Stage2 (Polish) time: 0.7500 s
+   14    1.279187e-02    0.792271   1.414367e-03
+CPR-MxP: Stage1 (AMG) time: 2.2500 s, Stage2 (Polish) time: 1.0000 s
+   15    9.951158e-03    0.777928   1.100276e-03
+CPR-MxP: Stage1 (AMG) time: 2.2500 s, Stage2 (Polish) time: 1.2500 s
+   16    7.626024e-03    0.766345   8.431915e-04
+CPR-MxP: Stage1 (AMG) time: 2.2500 s, Stage2 (Polish) time: 1.5000 s
+   17    6.094280e-03    0.799142   6.738301e-04
+CPR-MxP: Stage1 (AMG) time: 2.2500 s, Stage2 (Polish) time: 1.5000 s
+   18    4.744580e-03    0.778530   5.245970e-04
+CPR-MxP: Stage1 (AMG) time: 2.2500 s, Stage2 (Polish) time: 1.7500 s
+   19    3.890473e-03    0.819982   4.301604e-04
+CPR-MxP: Stage1 (AMG) time: 2.2500 s, Stage2 (Polish) time: 2.0000 s
+   20    3.036945e-03    0.780611   3.357878e-04
+CPR-MxP: Stage1 (AMG) time: 2.2500 s, Stage2 (Polish) time: 2.2500 s
+   21    2.391137e-03    0.787349   2.643823e-04
+CPR-MxP: Stage1 (AMG) time: 2.2500 s, Stage2 (Polish) time: 2.2500 s
+   22    1.800005e-03    0.752782   1.990223e-04
+CPR-MxP: Stage1 (AMG) time: 2.2500 s, Stage2 (Polish) time: 2.2500 s
+   23    1.295733e-03    0.719850   1.432662e-04
+CPR-MxP: Stage1 (AMG) time: 2.5000 s, Stage2 (Polish) time: 2.2500 s
+   24    1.015494e-03    0.783721   1.122808e-04
+CPR-MxP: Stage1 (AMG) time: 2.5000 s, Stage2 (Polish) time: 2.2500 s
+   25    7.903479e-04    0.778289   8.738690e-05
+CPR-MxP: Stage1 (AMG) time: 2.7500 s, Stage2 (Polish) time: 2.2500 s
+   26    6.129493e-04    0.775544   6.777236e-05
+CPR-MxP: Stage1 (AMG) time: 3.0000 s, Stage2 (Polish) time: 2.2500 s
+   27    4.817488e-04    0.785952   5.326583e-05
+CPR-MxP: Stage1 (AMG) time: 3.0000 s, Stage2 (Polish) time: 2.2500 s
+   28    3.882923e-04    0.806006   4.293256e-05
+CPR-MxP: Stage1 (AMG) time: 3.0000 s, Stage2 (Polish) time: 2.5000 s
+   29    3.082688e-04    0.793909   3.408456e-05
+CPR-MxP: Stage1 (AMG) time: 3.0000 s, Stage2 (Polish) time: 2.7500 s
+   30    2.354212e-04    0.763688   2.602996e-05
+CPR-MxP: Stage1 (AMG) time: 3.2500 s, Stage2 (Polish) time: 2.7500 s
+
+ >> GMRES Precond Total: time(min,max,ave) = (6.34, 6.50, 6.42) seconds
+
+
+GMRES with mixed precision CPR completed in 8.199733 seconds
+Iterations: 30, Final relative residual: 2.602996e-05
+Total time (setup+solve): 9.096048 seconds
+[XeonGold5122:134463:0:134463] Caught signal 11 (Segmentation fault: Sent by the kernel at address (nil))
+==== backtrace ====
+    0  /usr/lib64/libucs.so.0(+0x17970) [0x7f19672ab970]
+    1  /usr/lib64/libucs.so.0(+0x17b22) [0x7f19672abb22]
+    2  /lib64/libc.so.6(cfree+0x1c) [0x7f1a3285ab7c]
+    3  ./test_bsr_cprgmres_hybrid() [0x41f482]
+    4  ./test_bsr_cprgmres_hybrid() [0x419fe9]
+    5  ./test_bsr_cprgmres_hybrid() [0x42924c]
+    6  ./test_bsr_cprgmres_hybrid() [0x403e4b]
+    7  ./test_bsr_cprgmres_hybrid() [0x4045f2]
+    8  /lib64/libc.so.6(__libc_start_main+0xf5) [0x7f1a327f7555]
+    9  ./test_bsr_cprgmres_hybrid() [0x402849]
+===================
+[XeonGold5122:134464:0:134464] Caught signal 11 (Segmentation fault: Sent by the kernel at address (nil))
+==== backtrace ====
+    0  /usr/lib64/libucs.so.0(+0x17970) [0x7efc1d9e0970]
+    1  /usr/lib64/libucs.so.0(+0x17b22) [0x7efc1d9e0b22]
+    2  /lib64/libc.so.6(cfree+0x1c) [0x7efce8f8fb7c]
+    3  ./test_bsr_cprgmres_hybrid() [0x41f482]
+    4  ./test_bsr_cprgmres_hybrid() [0x419fe9]
+    5  ./test_bsr_cprgmres_hybrid() [0x42924c]
+    6  ./test_bsr_cprgmres_hybrid() [0x403e4b]
+    7  ./test_bsr_cprgmres_hybrid() [0x4045f2]
+    8  /lib64/libc.so.6(__libc_start_main+0xf5) [0x7efce8f2c555]
+    9  ./test_bsr_cprgmres_hybrid() [0x402849]
+===================
+[XeonGold5122:134462:0:134462] Caught signal 11 (Segmentation fault: Sent by the kernel at address (nil))
+==== backtrace ====
+[XeonGold5122:134465:0:134465] Caught signal 11 (Segmentation fault: Sent by the kernel at address (nil))
+==== backtrace ====
+    0  /usr/lib64/libucs.so.0(+0x17970) [0x7fd1ec9c3970]
+    1  /usr/lib64/libucs.so.0(+0x17b22) [0x7fd1ec9c3b22]
+    0  /usr/lib64/libucs.so.0(+0x17970) [0x7f19e634c970]
+    1  /usr/lib64/libucs.so.0(+0x17b22) [0x7f19e634cb22]
+    2  /lib64/libc.so.6(cfree+0x1c) [0x7f1ab18fbb7c]
+    3  ./test_bsr_cprgmres_hybrid() [0x41f482]
+    4  ./test_bsr_cprgmres_hybrid() [0x419fe9]
+    5  ./test_bsr_cprgmres_hybrid() [0x42924c]
+    6  ./test_bsr_cprgmres_hybrid() [0x403e4b]
+    7  ./test_bsr_cprgmres_hybrid() [0x4045f2]
+    8  /lib64/libc.so.6(__libc_start_main+0xf5) [0x7f1ab1898555]
+    9  ./test_bsr_cprgmres_hybrid() [0x402849]
+===================
+    2  /lib64/libc.so.6(cfree+0x1c) [0x7fd2b7f72b7c]
+    3  ./test_bsr_cprgmres_hybrid() [0x41f482]
+    4  ./test_bsr_cprgmres_hybrid() [0x419fe9]
+    5  ./test_bsr_cprgmres_hybrid() [0x42924c]
+    6  ./test_bsr_cprgmres_hybrid() [0x403e4b]
+    7  ./test_bsr_cprgmres_hybrid() [0x4045f2]
+    8  /lib64/libc.so.6(__libc_start_main+0xf5) [0x7fd2b7f0f555]
+    9  ./test_bsr_cprgmres_hybrid() [0x402849]
+===================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 0 PID 134462 RUNNING AT XeonGold5122
+=   KILLED BY SIGNAL: 11 (Segmentation fault)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 1 PID 134463 RUNNING AT XeonGold5122
+=   KILLED BY SIGNAL: 11 (Segmentation fault)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 2 PID 134464 RUNNING AT XeonGold5122
+=   KILLED BY SIGNAL: 11 (Segmentation fault)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 3 PID 134465 RUNNING AT XeonGold5122
+=   KILLED BY SIGNAL: 11 (Segmentation fault)
+===================================================================================

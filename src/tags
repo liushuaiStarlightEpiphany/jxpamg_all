@@ -1,0 +1,172 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+Avg_Gammas	jxfpamg_interface copy.c	/^int Avg_Gammas=72\/2;$/;"	v
+BuildMatParAwFromOneFile	jxfpamg_interface copy.c	/^BuildMatParAwFromOneFile(char *filename, JXF_ParCSRMatrix  *A_ptr, int *rowstarts  )$/;"	f
+BuildMatParFromOneFile_2	jxfpamg_interface copy.c	/^BuildMatParFromOneFile_2( char *filename, JXF_ParCSRMatrix  *A_ptr, int num_functions )$/;"	f
+BuildMatParFromOneFile_tao	jxfpamg_interface copy.c	/^BuildMatParFromOneFile_tao( char *filename, JXF_ParCSRMatrix  *A_ptr, int *rowstarts)$/;"	f
+BuildMatParPwFromOneFile	jxfpamg_interface copy.c	/^BuildMatParPwFromOneFile(char *filename, JXF_ParCSRMatrix  *A_ptr,int *rowstarts, int *colstarts ,int cols )$/;"	f
+BuildRhsParFromOneFile_IJ_zzy	jxfpamg_interface copy.c	/^BuildRhsParFromOneFile_IJ_zzy( char                *filename,$/;"	f
+BuildRhsParFromOneFile_zzy	jxfpamg_interface copy.c	/^BuildRhsParFromOneFile_zzy( char                *filename,$/;"	f
+DEBUG	jxfpamg_interface copy.c	22;"	d	file:
+Gammas	jxfpamg_interface copy.c	/^int Gammas=72;$/;"	v
+JXFPAMG_Solver	jxfpamg_interface.c	/^int JXFPAMG_Solver(MPI_Comm            comm,$/;"	f
+JXFPAMG_Solver_Interface	jxfpamg_interface.c	/^int JXFPAMG_Solver_Interface(int row, int *ia, int  *ja, double *a, double *ser_x, double *ser_b, double tol, int solver_id, int *iter)$/;"	f
+JXFPAPCTL_Solver_Interface	jxfpapctl_interface.c	/^int JXFPAPCTL_Solver_Interface(int row, int *ia, int  *ja, double *a, double *ser_x, double *ser_b, double tol, int solver_id, int precond_id, int *iter)                     $/;"	f
+JXFPSCHUR_Solver_Interface	jxfpschur_interface.c	/^int JXFPSCHUR_Solver_Interface(int row, int *ia, int  *ja, double *a, double *ser_x, double *ser_b, double tol, int solver_id, int *iter) $/;"	f
+JXF_CSRMatrix	jxfpamg_interface copy.c	29;"	d	file:
+JXF_CSRMatrixDestroy	jxfpamg_interface copy.c	35;"	d	file:
+JXF_CSRMatrixGetNumRows	jxfpamg_interface copy.c	42;"	d	file:
+JXF_CSRMatrixRead	jxfpamg_interface copy.c	31;"	d	file:
+JXF_CSRMatrixToParCSRMatrix	jxfpamg_interface copy.c	33;"	d	file:
+JXF_Int	jxfpamg_interface copy.c	25;"	d	file:
+JXF_MPI_REAL	jxfpamg_interface copy.c	28;"	d	file:
+JXF_ParAMG_GS_Setup	jxfpamg_interface copy.c	/^JXF_ParAMG_GS_Setup( JXF_Solver solver,$/;"	f
+JXF_ParCSRMatrixDestroy	jxfpamg_interface copy.c	37;"	d	file:
+JXF_ParCSRMatrixGetColPartitioning	jxfpamg_interface copy.c	40;"	d	file:
+JXF_ParCSRMatrixGetLocalRange	jxfpamg_interface copy.c	41;"	d	file:
+JXF_ParCSRMatrixGetRowPartitioning	jxfpamg_interface copy.c	39;"	d	file:
+JXF_ParVectorDestroy	jxfpamg_interface copy.c	38;"	d	file:
+JXF_Real	jxfpamg_interface copy.c	26;"	d	file:
+JXF_Vector	jxfpamg_interface copy.c	30;"	d	file:
+JXF_VectorDestroy	jxfpamg_interface copy.c	36;"	d	file:
+JXF_VectorRead	jxfpamg_interface copy.c	32;"	d	file:
+JXF_VectorToParVector	jxfpamg_interface copy.c	34;"	d	file:
+MAT_PTR_TYPE	mmio_highlevel.h	9;"	d
+MAT_VAL_TYPE	mmio_highlevel.h	12;"	d
+MM_ARRAY_STR	mmio.h	105;"	d
+MM_COMPLEX_STR	mmio.h	109;"	d
+MM_COORDINATE_STR	mmio.h	107;"	d
+MM_COULD_NOT_READ_FILE	mmio.h	84;"	d
+MM_COULD_NOT_WRITE_FILE	mmio.h	90;"	d
+MM_DENSE_STR	mmio.h	106;"	d
+MM_GENERAL_STR	mmio.h	112;"	d
+MM_HERM_STR	mmio.h	114;"	d
+MM_INT_STR	mmio.h	111;"	d
+MM_IO_H	mmio.h	15;"	d
+MM_LINE_TOO_LONG	mmio.h	89;"	d
+MM_MAX_LINE_LENGTH	mmio.h	17;"	d
+MM_MAX_TOKEN_LENGTH	mmio.h	19;"	d
+MM_MTX_STR	mmio.h	104;"	d
+MM_NOT_MTX	mmio.h	86;"	d
+MM_NO_HEADER	mmio.h	87;"	d
+MM_PATTERN_STR	mmio.h	116;"	d
+MM_PREMATURE_EOF	mmio.h	85;"	d
+MM_REAL_STR	mmio.h	110;"	d
+MM_SKEW_STR	mmio.h	115;"	d
+MM_SPARSE_STR	mmio.h	108;"	d
+MM_SYMM_STR	mmio.h	113;"	d
+MM_UNSUPPORTED_TYPE	mmio.h	88;"	d
+MM_typecode	mmio.h	/^typedef char MM_typecode[4];$/;"	t
+MatrixMarketBanner	mmio.h	18;"	d
+NP	jxfpamg_interface copy.c	/^int NP;$/;"	v
+NTHREADS	jxfpamg_interface copy.c	/^int NTHREADS=1;$/;"	v
+Own_Gammas	jxfpamg_interface copy.c	/^int Own_Gammas=0;$/;"	v
+PRINT_CF	jxfpamg_interface copy.c	23;"	d	file:
+ParVec2SerVec_file_zzy	jxfpamg_interface copy.c	/^ParVec2SerVec_file_zzy(jxf_ParVector *x, char *filename)$/;"	f
+Read_VectorI	jxfpamg_interface copy.c	/^Read_VectorI( int **ja_out,  int *nfree_out, char *image_file99)$/;"	f
+Tid	jxfpamg_interface copy.c	/^int Tid=0;$/;"	v
+Trans_Img	jxfpamg_interface copy.c	/^Trans_Img(int *Img, int Img_size, int nnm_h){$/;"	f
+USE_OMP	jxfpamg_interface copy.c	24;"	d	file:
+VALUE_TYPE	mmio_highlevel.h	5;"	d
+Vd_its	jxfpamg_interface copy.c	/^int Vd_its= 0;$/;"	v
+Vd_its_max	jxfpamg_interface copy.c	/^int Vd_its_max= 0;$/;"	v
+Vgamma_its	jxfpamg_interface copy.c	/^int Vgamma_its= 0;$/;"	v
+Vgamma_its_max	jxfpamg_interface copy.c	/^int Vgamma_its_max= 0;$/;"	v
+Vw_its	jxfpamg_interface copy.c	/^int Vw_its= 0;$/;"	v
+Vw_its_max	jxfpamg_interface copy.c	/^int Vw_its_max= 0;$/;"	v
+Write_VectorD	jxfpamg_interface copy.c	/^Write_VectorD( double *rsh_out,  int nfree, char *filename)$/;"	f
+_MMIO_HIGHLEVEL_	mmio_highlevel.h	2;"	d
+__USE_GNU	jxfpamg_interface copy.c	6;"	d	file:
+at_mult_x_c	jxfpamg_interface copy.c	/^at_mult_x_c(int *ia, int *ja, double *a, double *x, int n, int m,  double *y)$/;"	f
+boomeramg_pcg_solver	jxfpamg_interface copy.c	/^boomeramg_pcg_solver( MPI_Comm            comm,$/;"	f
+boomeramg_solver	jxfpamg_interface copy.c	/^boomeramg_solver( MPI_Comm            comm,$/;"	f
+check_correctness	solver.c	/^double check_correctness(int n, int *row_ptr, int *col_idx, double *val, double *x, double *b)$/;"	f
+datadir	jxfpamg_interface copy.c	/^char datadir[80]=".\/";$/;"	v
+distribution_of_nonzeros	jxfpamg_interface copy.c	/^distribution_of_nonzeros(jxf_CSRMatrix  *A, int **num_nz_row)$/;"	f
+dotproduct	my_solver.h	/^double dotproduct(double *x1, double *x2, int n)$/;"	f
+exclusive_scan	mmio_highlevel.h	/^void exclusive_scan(MAT_PTR_TYPE *input, int length)$/;"	f
+ft_tmp	jxfpamg_interface copy.c	/^double **yt_tmp,**ft_tmp,**y_tmp;$/;"	v
+inner_solver	jxfpamg_interface copy.c	/^int inner_solver=2;     \/*(1:CG,2:EAMG,3:CAMG) *\/$/;"	v
+jxf_BoomerAMGSolve	jxfpamg_interface copy.c	43;"	d	file:
+jxf_CSRMatrixTDMGReorderByVariablesT	jxfpapctl_interface.c	/^jxf_CSRMatrixTDMGReorderByVariablesT( jxf_CSRMatrix *A, JXF_Int num_groups )$/;"	f
+jxf_SeqVectorTDMGReorderByVariablesT	jxfpapctl_interface.c	/^jxf_SeqVectorTDMGReorderByVariablesT( jxf_Vector *x, JXF_Int num_groups )$/;"	f
+jxf_SeqVectorTDMGReorderByVariablesT_zl	jxfpapctl_interface.c	/^jxf_SeqVectorTDMGReorderByVariablesT_zl( jxf_Vector *x, JXF_Int num_groups, int **map)$/;"	f
+jxf_boomeramg_pcg_solver	jxfpamg_interface copy.c	/^jxf_boomeramg_pcg_solver( MPI_Comm            comm,$/;"	f
+jxf_printf	jxfpamg_interface copy.c	27;"	d	file:
+jxfpamg_pgmres_solver	jxfpamg_interface copy.c	/^jxfpamg_pgmres_solver( MPI_Comm            comm,$/;"	f
+load_b	solver.c	/^void load_b(int n, double *b, char *filename)$/;"	f
+main	solver.c	/^int main(int argc, char **argv)$/;"	f
+matrix_transposition	mmio_highlevel.h	/^void matrix_transposition(const int           m,$/;"	f
+maxncpsize	jxfpamg_interface copy.c	/^int maxncpsize=0;$/;"	v
+mm_clear_typecode	mmio.h	75;"	d
+mm_initialize_typecode	mmio.h	78;"	d
+mm_is_array	mmio.h	41;"	d
+mm_is_complex	mmio.h	43;"	d
+mm_is_coordinate	mmio.h	39;"	d
+mm_is_dense	mmio.h	40;"	d
+mm_is_general	mmio.h	49;"	d
+mm_is_hermitian	mmio.h	51;"	d
+mm_is_integer	mmio.h	46;"	d
+mm_is_matrix	mmio.h	36;"	d
+mm_is_pattern	mmio.h	45;"	d
+mm_is_real	mmio.h	44;"	d
+mm_is_skew	mmio.h	50;"	d
+mm_is_sparse	mmio.h	38;"	d
+mm_is_symmetric	mmio.h	48;"	d
+mm_is_valid	mmio.h	/^int mm_is_valid(MM_typecode matcode)		\/* too complex for a macro *\/$/;"	f
+mm_read_banner	mmio.h	/^int mm_read_banner(FILE *f, MM_typecode *matcode)$/;"	f
+mm_read_mtx_array_size	mmio.h	/^int mm_read_mtx_array_size(FILE *f, int *M, int *N)$/;"	f
+mm_read_mtx_crd	mmio.h	/^int mm_read_mtx_crd(char *fname, int *M, int *N, int *nz, int **I, int **J,$/;"	f
+mm_read_mtx_crd_data	mmio.h	/^int mm_read_mtx_crd_data(FILE *f, int M, int N, int nz, int I[], int J[],$/;"	f
+mm_read_mtx_crd_entry	mmio.h	/^int mm_read_mtx_crd_entry(FILE *f, int *I, int *J, double *real, double *imag,$/;"	f
+mm_read_mtx_crd_size	mmio.h	/^int mm_read_mtx_crd_size(FILE *f, int *M, int *N, int *nz)$/;"	f
+mm_read_unsymmetric_sparse	mmio.h	/^int mm_read_unsymmetric_sparse(const char *fname, int *M_, int *N_, int *nz_,$/;"	f
+mm_set_array	mmio.h	60;"	d
+mm_set_complex	mmio.h	64;"	d
+mm_set_coordinate	mmio.h	59;"	d
+mm_set_dense	mmio.h	61;"	d
+mm_set_general	mmio.h	71;"	d
+mm_set_hermitian	mmio.h	73;"	d
+mm_set_integer	mmio.h	67;"	d
+mm_set_matrix	mmio.h	58;"	d
+mm_set_pattern	mmio.h	66;"	d
+mm_set_real	mmio.h	65;"	d
+mm_set_skew	mmio.h	72;"	d
+mm_set_sparse	mmio.h	62;"	d
+mm_set_symmetric	mmio.h	70;"	d
+mm_strdup	mmio.h	/^char *mm_strdup(const char *s)$/;"	f
+mm_typecode_to_str	mmio.h	/^char  *mm_typecode_to_str(MM_typecode matcode)$/;"	f
+mm_write_banner	mmio.h	/^int mm_write_banner(FILE *f, MM_typecode matcode)$/;"	f
+mm_write_mtx_array_size	mmio.h	/^int mm_write_mtx_array_size(FILE *f, int M, int N)$/;"	f
+mm_write_mtx_crd	mmio.h	/^int mm_write_mtx_crd(char fname[], int M, int N, int nz, int I[], int J[],$/;"	f
+mm_write_mtx_crd_size	mmio.h	/^int mm_write_mtx_crd_size(FILE *f, int M, int N, int nz)$/;"	f
+mmio_allinone	mmio_highlevel.h	/^int mmio_allinone(int *m, int *n, int *nnz, int *isSymmetric,$/;"	f
+mmio_allinone_complex	mmio_highlevel.h	/^int mmio_allinone_complex(int *m, int *n, int *nnz, int *isSymmetric,$/;"	f
+mmio_data	mmio_highlevel.h	/^int mmio_data(int *csrRowPtr, int *csrColIdx, VALUE_TYPE *csrVal, char *filename)$/;"	f
+mmio_info	mmio_highlevel.h	/^int mmio_info(int *m, int *n, int *nnz, int *isSymmetric, char *filename)$/;"	f
+mmio_save_as_bin	mmio_highlevel.h	/^int mmio_save_as_bin(int m,int n,int nnz,const int *rowptr,const int *colidx,const VALUE_TYPE* val,const char*file){$/;"	f
+my_solver	my_solver.h	/^void my_solver(int n, int *row_ptr, int *col_idx, double *val,$/;"	f
+ndof	jxfpamg_interface copy.c	/^int ndof=0;$/;"	v
+par_cg_solver	jxfpamg_interface copy.c	/^par_cg_solver(jxf_ParCSRMatrix *A,$/;"	f
+pcg_solver_	jxfpamg_interface copy.c	/^pcg_solver_(int *row, int *ia, int  *ja, double *a, double *ser_b, double *ser_x, double *tol0, int *iter)$/;"	f
+pgmres_solver_	jxfpamg_interface copy.c	/^pgmres_solver_(int *row, int *ia, int  *ja, double *a, double *ser_b, double *ser_x, double *tol0, int *iter)$/;"	f
+postprocess	jxfpamg_interface copy.c	/^postprocess(char *filenamet, char *filenamen)$/;"	f
+read_matrix	jxfpamg_interface copy.c	/^read_matrix( int **ia_out, int **ja_out, double **a_out, int *nfree_out, char *image_file99)$/;"	f
+solver_tol	jxfpamg_interface copy.c	/^double solver_tol =1.0e-6;$/;"	v
+spmv	my_solver.h	/^void spmv(int n, int *row_ptr, int *col_idx, double *val, double *x, double *y)$/;"	f
+store_x	solver.c	/^void store_x(int n, double *x, char *filename)$/;"	f
+time_Bg	jxfpamg_interface copy.c	/^double time_Bg=0;$/;"	v
+time_Vd	jxfpamg_interface copy.c	/^double time_Vd=0;$/;"	v
+time_Vw	jxfpamg_interface copy.c	/^double time_Vw=0;$/;"	v
+time_pcg	jxfpamg_interface copy.c	/^double time_pcg=0;$/;"	v
+timeofddm	jxfpamg_interface copy.c	/^double timeofddm = 0;$/;"	v
+transorder	jxfpamg_interface copy.c	/^int transorder=0;$/;"	v
+vec2norm	my_solver.h	/^double vec2norm(double *x, int n)$/;"	f
+wfile	jxfpamg_interface copy.c	/^int wfile=0;$/;"	v
+write_matrix	jxfpamg_interface copy.c	/^write_matrix( int *a_i, int *a_j, double *a_data, int nfree, char *filename){$/;"	f
+y_tmp	jxfpamg_interface copy.c	/^double **yt_tmp,**ft_tmp,**y_tmp;$/;"	v
+yt_tmp	jxfpamg_interface copy.c	/^double **yt_tmp,**ft_tmp,**y_tmp;$/;"	v

@@ -1,0 +1,157 @@
+#========================================================================#
+#  JXFPAMG(IAPCM & XTU Parallel Algebraic Multigrid) (c) 2009-2013        #
+#  Institute of Applied Physics and Computational Mathematics            #
+#  School of Mathematics and Computational Science Xiangtan University   #
+#  peghoty@163.com   (Zhou Zhiyang)                                      #
+#  xwxu@iapcm.ac.cn  (Xu Xiaowen)                                        #
+#  yuexq1111@163.com (Yue Xiaoqiang)                                     #
+#========================================================================#
+
+# Created by peghoty 2011/09/022
+# Modified by Yue Xiaoqiang on 2012/10/22
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# JXFPAMG directory, MPI and MKL diectory
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+JXFPAMGDIR = ./
+#MPIDIR   = /opt/mpich-3.3.icc
+#MPIDIR    = /vol8/appsoftware/mpi-x
+#MKL_DIR   = /opt/intel/oneapi/mkl/2022.1.0
+
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Use MUMPS as the coarsest solver [YES] or not [#YES]
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+JXF_USE_MUMPS = #YES
+ifdef JXF_USE_MUMPS
+topdir = /home/export/base/ycsc_zhaol/xinx/online1/real_mumps_openmp/MUMPS_5.4.0
+endif
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Use the OpenMP parallelism [YES] or not [#YES]
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+JXFPAMG_USE_OMP = YES
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Use big-int and big-double structures [YES] or not [#YES]
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+JXF_USE_BIG_INT = #YES
+JXF_USE_BIG_DOUBLE = #YES
+JXF_USE_SINGLE = YES
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# suffixes
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+.SUFFIXES:.c .f90 .f .for
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# compiler
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ifdef JXFPAMG_USE_OMP
+FC = mpif90 -fopenmp
+CC = mpicc -fopenmp
+else
+FC = mpif90
+CC = mpicc
+endif
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# compile option
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+DEST := ./install
+
+ifdef JXFPAMG_USE_OMP
+JXF_OMP_CP_OPTION = -DJXF_USING_OPENMP=1
+else
+JXF_OMP_CP_OPTION = -DJXF_USING_OPENMP=0
+endif
+
+ifdef JXF_USE_BIG_INT
+JXF_BIG_INT_OPTION = -DJXF_USING_BIG_INT=1
+else
+JXF_BIG_INT_OPTION = -DJXF_USING_BIG_INT=0
+endif
+
+ifdef JXF_USE_BIG_DOUBLE
+JXF_BIG_DOUBLE_OPTION = -DJXF_USING_BIG_DOUBLE=1
+else
+JXF_BIG_DOUBLE_OPTION = -DJXF_USING_BIG_DOUBLE=0
+endif
+
+ifdef JXF_USE_SINGLE
+JXF_SINGLE_OPTION = -DJXF_SINGLE=1
+else
+JXF_SINGLE_OPTION = -DJXF_SINGLE=0
+endif
+
+ifdef JXF_USE_MUMPS
+JXF_MUMPS_OPTION = -DJXF_USING_MUMPS=1
+libdir = $(topdir)/lib
+include $(topdir)/Makefile.inc
+MUMPS_INCLUDE_O = $(INCS)
+MUMPS_INCLUDE_T = -I$(topdir)/include
+MUMPS_INCLUDES = $(MUMPS_INCLUDE_O) $(MUMPS_INCLUDE_T)
+MUMPS_LIB_O = -L$(libdir) -ldmumps -lsmumps
+MUMPS_LIB_T = -L$(libdir) -lmumps_common
+MUMPS_LIBS = $(MUMPS_LIB_O) $(MUMPS_LIB_T) $(LORDERINGS) $(LIBS) $(LIBOTHERS)
+else
+JXF_MUMPS_OPTION = -DJXF_USING_MUMPS=0
+endif
+
+C_COMPILE_OPTION += -O2 ${JXF_OMP_CP_OPTION} ${JXF_BIG_INT_OPTION} ${JXF_BIG_DOUBLE_OPTION} ${JXF_MUMPS_OPTION} ${JXF_SINGLE_OPTION}
+F_COMPILE_OPTION += -O2
+CDEFS  = 
+FDEFS  = ${CDEFS}
+
+C_COMPILE_FLAGS += -fPIC -O2 
+F_COMPILE_FLAGS += -fPIC -O2
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# include
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+JXFPAMGINCLUDES = -I ${JXFPAMGDIR}/include
+MPIINCLUDES    = -I ${MPIDIR}/include
+MKLINCLUDES    = -I $(MKL_DIR)/include  
+
+AllCINCLUDES   = ${JXFPAMGINCLUDES} ${MPIINCLUDES} ${MKLINCLUDES} ${MUMPS_INCLUDES}
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# basic libs
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ifdef JXF_USE_MUMPS
+MATHLIB = -lm
+BLAS_LIB = -lblas
+LAPACK_LIB = -llapack
+METIS_LIB = -lmetis
+PMETIS_LIB = -lparmetis
+endif
+CPPLIB  = -lstdc++
+MPILIB  = -L ${MPIDIR}/lib -lmpi
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# libs for building jxfpamg lib
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+LIBS2JXFPAMG = ${MUMPS_LIBS} ${MPILIB} ${MATHLIB} ${CPPLIB} ${BLAS_LIB} ${LAPACK_LIB}  ${PMETIS_LIB} ${METIS_LIB}
+
+CFLAGS = ${CDEFS} ${C_COMPILE_OPTION} ${AllCINCLUDES} ${LIBS2JXFPAMG}
+FFLAGS = ${FDEFS} ${F_COMPILE_OPTION} ${AllCINCLUDES} ${LIBS2JXFPAMG}
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# rules for compiling the source files
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+.c.o:
+	${CC} -o $@ -c ${CFLAGS} $<
+.f.o:
+	${FC} -o $@ -c ${FFLAGS} $<
+.for.o:
+	${FC} -o $@ -c ${FFLAGS} $<
+.f90.o:
+	${FC} -o $@ -c ${FFLAGS} $<
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# all libs for running programs
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+JXFPAMGLIB  = -L ${JXFPAMGDIR}/lib -lJXFPAMG
+MKLLIB     = -L $(MKL_DIR)/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -ldl
+
+ALLLIBS    =  ${JXFPAMGLIB} ${LIBS2JXFPAMG} ${MKLLIB}

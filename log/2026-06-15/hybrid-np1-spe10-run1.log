@@ -1,0 +1,114 @@
+
+=================================================
+Mixed Precision CPR-GMRES Solver
+Matrix file: /home/spring/l_s/jxpamg_all/JXPAMG-bsr/data/spe10_bsr/A_bsr_spe10.bin
+Matrix type: BSR
+Binary format: yes
+RHS file: /home/spring/l_s/jxpamg_all/JXPAMG-bsr/data/spe10_bsr/b_spe10.dat
+=================================================
+
+BSR Matrix Info (myid 0):
+  Block size: 2
+  Number of block rows: 1094422
+  Number of block cols: 1094422
+  Number of block nonzeros: 7478310
+  Scalar dimensions: 2188844 x 2188844
+Reading RHS from file: /home/spring/l_s/jxpamg_all/JXPAMG-bsr/data/spe10_bsr/b_spe10.dat
+
+Applying decoupling to serial BSR system...
+  Decoupling method: True-IMPES
+  Is thermal model: no
+  Decoupling completed in 0.084519 seconds
+  Matrix and RHS have been modified by decoupling
+  First diagonal block after decoupling:
+    3.416351e-02    3.089028e-04
+    7.801957e-02    4.240598e+01
+Low precision CPR setup completed in 1.708518 seconds
+
+Starting GMRES with mixed precision CPR preconditioner...
+Max iterations: 30, Tolerance: 1.0e-04
+Krylov subspace dimension: 30
+L2 norm of b: 9.044238e+00
+Initial L2 norm of residual: 9.044238e+00
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+CPR-MxP: Stage1 (AMG) time: 2.5000 s, Stage2 (Polish) time: 0.5000 s
+    1    1.847764e+00    0.204303   2.043029e-01
+CPR-MxP: Stage1 (AMG) time: 5.2500 s, Stage2 (Polish) time: 1.2500 s
+    2    7.402821e-01    0.400637   8.185124e-02
+CPR-MxP: Stage1 (AMG) time: 7.0000 s, Stage2 (Polish) time: 1.7500 s
+    3    3.284552e-01    0.443689   3.631652e-02
+CPR-MxP: Stage1 (AMG) time: 9.5000 s, Stage2 (Polish) time: 2.2500 s
+    4    1.832118e-01    0.557798   2.025730e-02
+CPR-MxP: Stage1 (AMG) time: 12.5000 s, Stage2 (Polish) time: 3.0000 s
+    5    1.202240e-01    0.656202   1.329288e-02
+CPR-MxP: Stage1 (AMG) time: 16.2500 s, Stage2 (Polish) time: 3.7500 s
+    6    8.419378e-02    0.700308   9.309107e-03
+CPR-MxP: Stage1 (AMG) time: 20.0000 s, Stage2 (Polish) time: 4.2500 s
+    7    6.196653e-02    0.735999   6.851493e-03
+CPR-MxP: Stage1 (AMG) time: 22.0000 s, Stage2 (Polish) time: 4.7500 s
+    8    4.711977e-02    0.760407   5.209921e-03
+CPR-MxP: Stage1 (AMG) time: 24.0000 s, Stage2 (Polish) time: 5.2500 s
+    9    3.731780e-02    0.791978   4.126141e-03
+CPR-MxP: Stage1 (AMG) time: 26.0000 s, Stage2 (Polish) time: 5.7500 s
+   10    3.016413e-02    0.808304   3.335177e-03
+CPR-MxP: Stage1 (AMG) time: 29.0000 s, Stage2 (Polish) time: 6.2500 s
+   11    2.489078e-02    0.825178   2.752115e-03
+CPR-MxP: Stage1 (AMG) time: 33.7500 s, Stage2 (Polish) time: 6.7500 s
+   12    2.083415e-02    0.837023   2.303583e-03
+CPR-MxP: Stage1 (AMG) time: 37.2500 s, Stage2 (Polish) time: 7.2500 s
+   13    1.686539e-02    0.809507   1.864766e-03
+CPR-MxP: Stage1 (AMG) time: 40.5000 s, Stage2 (Polish) time: 7.7500 s
+   14    1.338089e-02    0.793393   1.479494e-03
+CPR-MxP: Stage1 (AMG) time: 43.7500 s, Stage2 (Polish) time: 8.2500 s
+   15    1.053427e-02    0.787262   1.164749e-03
+CPR-MxP: Stage1 (AMG) time: 46.7500 s, Stage2 (Polish) time: 8.7500 s
+   16    8.072658e-03    0.766324   8.925748e-04
+CPR-MxP: Stage1 (AMG) time: 50.0000 s, Stage2 (Polish) time: 9.0000 s
+   17    6.438098e-03    0.797519   7.118453e-04
+CPR-MxP: Stage1 (AMG) time: 53.2500 s, Stage2 (Polish) time: 9.5000 s
+   18    5.012925e-03    0.778635   5.542673e-04
+CPR-MxP: Stage1 (AMG) time: 55.2500 s, Stage2 (Polish) time: 9.7500 s
+   19    4.113819e-03    0.820642   4.548553e-04
+CPR-MxP: Stage1 (AMG) time: 58.2500 s, Stage2 (Polish) time: 10.0000 s
+   20    3.245362e-03    0.788893   3.588320e-04
+CPR-MxP: Stage1 (AMG) time: 61.0000 s, Stage2 (Polish) time: 10.2500 s
+   21    2.552188e-03    0.786411   2.821894e-04
+CPR-MxP: Stage1 (AMG) time: 63.5000 s, Stage2 (Polish) time: 10.7500 s
+   22    1.897974e-03    0.743666   2.098546e-04
+CPR-MxP: Stage1 (AMG) time: 64.2500 s, Stage2 (Polish) time: 11.0000 s
+   23    1.364284e-03    0.718810   1.508456e-04
+CPR-MxP: Stage1 (AMG) time: 66.2500 s, Stage2 (Polish) time: 11.5000 s
+   24    1.067435e-03    0.782414   1.180238e-04
+CPR-MxP: Stage1 (AMG) time: 69.2500 s, Stage2 (Polish) time: 12.0000 s
+   25    8.337512e-04    0.781079   9.218590e-05
+CPR-MxP: Stage1 (AMG) time: 71.0000 s, Stage2 (Polish) time: 12.2500 s
+ false convergence 2: ||r|| = 1.70e-02  ||r||/||b|| = 1.88e-03
+
+ >> GMRES Precond Total: time(min,max,ave) = (81.89, 81.89, 81.89) seconds
+
+
+GMRES with mixed precision CPR completed in 100.830600 seconds
+Iterations: 25, Final relative residual: 1.881965e-03
+Total time (setup+solve): 102.539118 seconds
+[XeonGold5122:138764:0:138764] Caught signal 11 (Segmentation fault: Sent by the kernel at address (nil))
+==== backtrace ====
+    0  /usr/lib64/libucs.so.0(+0x17970) [0x7f87aef30970]
+    1  /usr/lib64/libucs.so.0(+0x17b22) [0x7f87aef30b22]
+    2  /lib64/libc.so.6(cfree+0x1c) [0x7f87b1daab7c]
+    3  ./test_bsr_cprgmres_hybrid() [0x41f482]
+    4  ./test_bsr_cprgmres_hybrid() [0x419fe9]
+    5  ./test_bsr_cprgmres_hybrid() [0x42924c]
+    6  ./test_bsr_cprgmres_hybrid() [0x403e4b]
+    7  ./test_bsr_cprgmres_hybrid() [0x4045f2]
+    8  /lib64/libc.so.6(__libc_start_main+0xf5) [0x7f87b1d47555]
+    9  ./test_bsr_cprgmres_hybrid() [0x402849]
+===================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 0 PID 138764 RUNNING AT XeonGold5122
+=   KILLED BY SIGNAL: 11 (Segmentation fault)
+===================================================================================

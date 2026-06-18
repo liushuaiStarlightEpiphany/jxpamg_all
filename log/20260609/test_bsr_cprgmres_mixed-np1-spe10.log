@@ -1,0 +1,665 @@
+
+=================================================
+Testing CPR-GMRES for BSR Matrix
+Matrix file: ../JXPAMG-bsr/data/spe10_bsr/A_bsr_spe10.bin
+Matrix type: BSR
+Binary format: yes
+RHS file: ../JXPAMG-bsr/data/spe10_bsr/b_spe10.dat
+=================================================
+
+BSR Matrix Info (myid 0):
+  Block size: 2
+  Number of block rows: 1094422
+  Number of block cols: 1094422
+  Number of block nonzeros: 7478310
+  Scalar dimensions: 2188844 x 2188844
+Reading RHS from file: ../JXPAMG-bsr/data/spe10_bsr/b_spe10.dat
+
+Applying decoupling to serial BSR system...
+  Decoupling method: True-IMPES
+  Is thermal model: no
+  Decoupling completed in 0.084753 seconds
+  Matrix and RHS have been modified by decoupling
+  First diagonal block after decoupling:
+    3.416351e-02    3.089028e-04
+    7.801957e-02    4.240598e+01
+
+=================================================
+Mixed Precision Iterative Refinement (IR) Solver
+Using single-precision jxfpamg for inner solves
+Using double-precision jxpamg for outer residuals
+=================================================
+
+
+Creating CPR preconditioner...
+CPR setup completed in 1.431003 seconds
+
+Creating GMRES solver with CPR preconditioner...
+GMRES setup completed in 0.002789 seconds
+IR Iteration  0: Initial residual = 9.044238e+00
+IR Iteration  0: Residual = 9.044238e+00 (rel = 1.000000e+00)
+Initial L2 norm of residual: 9.044074e+00
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 374.378204
+    1    2.712803e+00    0.299954   2.999537e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 1097.012451
+    2    2.257164e+00    0.832041   2.495739e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 398.419250
+    3    1.986256e+00    0.879978   2.196196e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 84.780327
+    4    1.729861e+00    0.870915   1.912701e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 225.476715
+    5    1.514554e+00    0.875535   1.674637e-01
+IR Iteration  1: Residual = 1.516291e+00 (rel = 1.676527e-01)
+Initial L2 norm of residual: 1.516202e+00
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 550.571411
+    1    1.341744e+00    0.884938   8.849377e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 142.999329
+    2    1.203871e+00    0.897243   7.940043e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 102.279236
+    3    1.065731e+00    0.885254   7.028955e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 34.845139
+    4    9.158217e-01    0.859336   6.040236e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 32.330086
+    5    8.077870e-01    0.882035   5.327702e-01
+IR Iteration  2: Residual = 8.093019e-01 (rel = 8.948260e-02)
+Initial L2 norm of residual: 8.092560e-01
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 346.488342
+    1    7.244005e-01    0.895144   8.951437e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 85.713905
+    2    6.527140e-01    0.901040   8.065606e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 83.573792
+    3    5.955441e-01    0.912412   7.359155e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 70.484169
+    4    5.471729e-01    0.918778   6.761431e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 34.807556
+    5    4.955916e-01    0.905731   6.124040e-01
+IR Iteration  3: Residual = 4.957018e-01 (rel = 5.480858e-02)
+Initial L2 norm of residual: 4.956746e-01
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 311.146545
+    1    4.555377e-01    0.919026   9.190257e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 33.907810
+    2    4.208738e-01    0.923905   8.490928e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 15.142077
+    3    3.906353e-01    0.928153   7.880881e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 8.107783
+    4    3.522519e-01    0.901741   7.106515e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 9.186441
+    5    3.036288e-01    0.861965   6.125567e-01
+IR Iteration  4: Residual = 3.037993e-01 (rel = 3.359037e-02)
+Initial L2 norm of residual: 3.037820e-01
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 204.088242
+    1    2.809071e-01    0.924699   9.246995e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 33.925304
+    2    2.635667e-01    0.938270   8.676178e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 27.094082
+    3    2.449104e-01    0.929216   8.062043e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 24.811069
+    4    2.159930e-01    0.881927   7.110131e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 34.730350
+    5    1.965746e-01    0.910097   6.470908e-01
+IR Iteration  5: Residual = 1.966949e-01 (rel = 2.174809e-02)
+Initial L2 norm of residual: 1.966841e-01
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 182.057816
+    1    1.808422e-01    0.919455   9.194553e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 17.315805
+    2    1.680128e-01    0.929057   8.542266e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 14.027027
+    3    1.547501e-01    0.921062   7.867955e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 32.522881
+    4    1.415439e-01    0.914661   7.196509e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 7.585780
+    5    1.310713e-01    0.926012   6.664054e-01
+IR Iteration  6: Residual = 1.311007e-01 (rel = 1.449550e-02)
+Initial L2 norm of residual: 1.310935e-01
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 140.913467
+    1    1.220969e-01    0.931373   9.313726e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 24.296347
+    2    1.107211e-01    0.906829   8.445958e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 30.616541
+    3    9.848463e-02    0.889484   7.512547e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 23.681833
+    4    8.827829e-02    0.896366   6.733993e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 30.519821
+    5    8.170538e-02    0.925543   6.232602e-01
+IR Iteration  7: Residual = 8.172870e-02 (rel = 9.036549e-03)
+Initial L2 norm of residual: 8.172461e-02
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 130.353851
+    1    7.547591e-02    0.923540   9.235396e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 21.690483
+    2    6.884704e-02    0.912172   8.424273e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 6.420459
+    3    6.279780e-02    0.912135   7.684075e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 17.886139
+    4    5.561210e-02    0.885574   6.804817e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 13.668056
+    5    5.126338e-02    0.921803   6.272698e-01
+IR Iteration  8: Residual = 5.127591e-02 (rel = 5.669456e-03)
+Initial L2 norm of residual: 5.127324e-02
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 103.519867
+    1    4.754135e-02    0.927216   9.272156e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 18.402674
+    2    4.424701e-02    0.930706   8.629649e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 18.247833
+    3    3.976634e-02    0.898735   7.755768e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 16.592876
+    4    3.682605e-02    0.926061   7.182313e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 14.424519
+    5    3.373006e-02    0.915929   6.578491e-01
+IR Iteration  9: Residual = 3.373174e-02 (rel = 3.729639e-03)
+Initial L2 norm of residual: 3.373008e-02
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 90.759697
+    1    3.175935e-02    0.941574   9.415735e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 12.523280
+    2    2.988481e-02    0.940977   8.859987e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 6.738756
+    3    2.780930e-02    0.930550   8.244659e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 19.664848
+    4    2.526655e-02    0.908565   7.490806e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 17.477829
+    5    2.120460e-02    0.839236   6.286554e-01
+IR Iteration 10: Residual = 2.120771e-02 (rel = 2.344887e-03)
+Initial L2 norm of residual: 2.120670e-02
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 88.276649
+    1    1.952134e-02    0.920527   9.205273e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 16.666687
+    2    1.815693e-02    0.930107   8.561887e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 17.393475
+    3    1.679441e-02    0.924958   7.919389e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 15.463097
+    4    1.578408e-02    0.939842   7.442971e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 18.708956
+    5    1.487973e-02    0.942705   7.016523e-01
+IR Iteration 11: Residual = 1.488154e-02 (rel = 1.645417e-03)
+Initial L2 norm of residual: 1.488080e-02
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 87.208611
+    1    1.375707e-02    0.924485   9.244849e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 14.946766
+    2    1.196516e-02    0.869746   8.040673e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 15.894669
+    3    1.081667e-02    0.904014   7.268881e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 25.407330
+    4    1.003855e-02    0.928063   6.745978e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 12.130668
+    5    9.016030e-03    0.898140   6.058835e-01
+IR Iteration 12: Residual = 9.017135e-03 (rel = 9.970034e-04)
+Initial L2 norm of residual: 9.016725e-03
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 81.178177
+    1    8.283556e-03    0.918688   9.186878e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 21.364254
+    2    7.716452e-03    0.931539   8.557932e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 17.673416
+    3    7.138384e-03    0.925086   7.916825e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 17.324926
+    4    6.469748e-03    0.906332   7.175275e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 24.914743
+    5    5.847653e-03    0.903846   6.485341e-01
+IR Iteration 13: Residual = 5.848647e-03 (rel = 6.466710e-04)
+Initial L2 norm of residual: 5.848379e-03
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 87.996033
+    1    5.347630e-03    0.914378   9.143782e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 20.773827
+    2    4.945813e-03    0.924861   8.456725e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 12.272451
+    3    4.634313e-03    0.937017   7.924099e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 4.661688
+    4    4.343884e-03    0.937331   7.427500e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 2.567516
+    5    4.150002e-03    0.955367   7.095987e-01
+IR Iteration 14: Residual = 4.150072e-03 (rel = 4.588636e-04)
+Initial L2 norm of residual: 4.149884e-03
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 78.023819
+    1    3.953340e-03    0.952639   9.526386e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 4.736876
+    2    3.708464e-03    0.938058   8.936306e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 9.906645
+    3    3.435848e-03    0.926488   8.279383e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 12.943724
+    4    3.163638e-03    0.920774   7.623436e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 16.444748
+    5    2.944465e-03    0.930721   7.095294e-01
+IR Iteration 15: Residual = 2.944956e-03 (rel = 3.256168e-04)
+Initial L2 norm of residual: 2.944835e-03
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 74.661880
+    1    2.718683e-03    0.923204   9.232039e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 13.929483
+    2    2.511550e-03    0.923811   8.528661e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 14.943806
+    3    2.434000e-03    0.969123   8.265318e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 6.504288
+    4    2.370387e-03    0.973865   8.049304e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 2.830956
+    5    2.127702e-03    0.897618   7.225200e-01
+IR Iteration 16: Residual = 2.127947e-03 (rel = 2.352820e-04)
+Initial L2 norm of residual: 2.127852e-03
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 69.895065
+    1    1.944081e-03    0.913635   9.136352e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 20.623884
+    2    1.844374e-03    0.948713   8.667773e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 9.085925
+    3    1.686533e-03    0.914420   7.925988e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 7.711416
+    4    1.471615e-03    0.872568   6.915964e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 18.112930
+    5    1.316064e-03    0.894299   6.184942e-01
+IR Iteration 17: Residual = 1.316230e-03 (rel = 1.455325e-04)
+Initial L2 norm of residual: 1.316180e-03
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 69.260284
+    1    1.235830e-03    0.938952   9.389517e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 8.947946
+    2    1.187723e-03    0.961074   9.024016e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 5.410870
+    3    1.120390e-03    0.943309   8.512434e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 12.134979
+    4    1.072551e-03    0.957302   8.148969e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 13.049950
+    5    1.014569e-03    0.945940   7.708438e-01
+IR Iteration 18: Residual = 1.014616e-03 (rel = 1.121837e-04)
+Initial L2 norm of residual: 1.014573e-03
+=============================================
+
+Iters     resid.norm     conv.rate  rel.res.norm(wrt.b_norm)
+-----    ------------    ---------- ------------------------
+vecR_norm_before = 0.000000
+vecR_norm_after = 69.501106
+    1    9.516734e-04    0.938003   9.380034e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 9.081277
+    2    8.443511e-04    0.887228   8.322227e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 13.741348
+    3    6.690149e-04    0.792342   6.594051e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 24.749483
+    4    6.059402e-04    0.905720   5.972364e-01
+vecR_norm_before = 0.000000
+vecR_norm_after = 8.913721
+    5    5.558163e-04    0.917279   5.478325e-01
+IR converged after 19 iterations
+Final relative residual: 6.146225e-05
+IR_cprgmres completed in 53.462652 seconds
+*** Error in `./test_bsr_cprgmres_mixed': corrupted double-linked list: 0x00000000225eae30 ***
+======= Backtrace: =========
+/lib64/libc.so.6(+0x7f474)[0x7f75f2827474]
+/lib64/libc.so.6(+0x813bd)[0x7f75f28293bd]
+./test_bsr_cprgmres_mixed[0x414028]
+./test_bsr_cprgmres_mixed[0x411339]
+./test_bsr_cprgmres_mixed[0x404d07]
+./test_bsr_cprgmres_mixed[0x403793]
+./test_bsr_cprgmres_mixed[0x404027]
+/lib64/libc.so.6(__libc_start_main+0xf5)[0x7f75f27ca555]
+./test_bsr_cprgmres_mixed[0x402849]
+======= Memory map: ========
+00400000-00563000 r-xp 00000000 08:01 78994254                           /home/spring/l_s/jxpamg_all/JXFPAMG-bsr-fmt/test_bsr_cprgmres_mixed
+00762000-00763000 r--p 00162000 08:01 78994254                           /home/spring/l_s/jxpamg_all/JXFPAMG-bsr-fmt/test_bsr_cprgmres_mixed
+00763000-00764000 rw-p 00163000 08:01 78994254                           /home/spring/l_s/jxpamg_all/JXFPAMG-bsr-fmt/test_bsr_cprgmres_mixed
+00764000-00778000 rw-p 00000000 00:00 0 
+00ced000-9b732000 rw-p 00000000 00:00 0                                  [heap]
+7f0000000000-7f0003000000 rw-p 00000000 00:00 0 
+7f1000000000-7f1000400000 rw-p 00000000 00:00 0 
+7f2000000000-7f2003a00000 rw-p 00000000 00:00 0 
+7f7560000000-7f75605f1000 rw-p 00000000 00:00 0 
+7f75605f1000-7f7564000000 ---p 00000000 00:00 0 
+7f7568000000-7f75685f1000 rw-p 00000000 00:00 0 
+7f75685f1000-7f756c000000 ---p 00000000 00:00 0 
+7f7570000000-7f75705f1000 rw-p 00000000 00:00 0 
+7f75705f1000-7f7574000000 ---p 00000000 00:00 0 
+7f7578000000-7f75785f1000 rw-p 00000000 00:00 0 
+7f75785f1000-7f757c000000 ---p 00000000 00:00 0 
+7f7580000000-7f75805f1000 rw-p 00000000 00:00 0 
+7f75805f1000-7f7584000000 ---p 00000000 00:00 0 
+7f7584000000-7f75845f1000 rw-p 00000000 00:00 0 
+7f75845f1000-7f7588000000 ---p 00000000 00:00 0 
+7f7588000000-7f75885f1000 rw-p 00000000 00:00 0 
+7f75885f1000-7f758c000000 ---p 00000000 00:00 0 
+7f758c000000-7f758c5f1000 rw-p 00000000 00:00 0 
+7f758c5f1000-7f7590000000 ---p 00000000 00:00 0 
+7f7590000000-7f75905f1000 rw-p 00000000 00:00 0 
+7f75905f1000-7f7594000000 ---p 00000000 00:00 0 
+7f7598000000-7f75985f1000 rw-p 00000000 00:00 0 
+7f75985f1000-7f759c000000 ---p 00000000 00:00 0 
+7f759dea9000-7f75a0000000 rw-p 00000000 00:00 0 
+7f75a0000000-7f75a05f1000 rw-p 00000000 00:00 0 
+7f75a05f1000-7f75a4000000 ---p 00000000 00:00 0 
+7f75a4000000-7f75a45f1000 rw-p 00000000 00:00 0 
+7f75a45f1000-7f75a8000000 ---p 00000000 00:00 0 
+7f75a8000000-7f75a85f1000 rw-p 00000000 00:00 0 
+7f75a85f1000-7f75ac000000 ---p 00000000 00:00 0 
+7f75ac000000-7f75ac5f1000 rw-p 00000000 00:00 0 
+7f75ac5f1000-7f75b0000000 ---p 00000000 00:00 0 
+7f75b0000000-7f75b05f1000 rw-p 00000000 00:00 0 
+7f75b05f1000-7f75b4000000 ---p 00000000 00:00 0 
+7f75b5adc000-7f75b7c33000 rw-p 00000000 00:00 0 
+7f75b7c33000-7f75b7c34000 ---p 00000000 00:00 0 
+7f75b7c34000-7f75b8434000 rw-p 00000000 00:00 0 
+7f75b8434000-7f75b8435000 ---p 00000000 00:00 0 
+7f75b8435000-7f75b8c35000 rw-p 00000000 00:00 0 
+7f75b8c35000-7f75b8c36000 ---p 00000000 00:00 0 
+7f75b8c36000-7f75b9436000 rw-p 00000000 00:00 0 
+7f75b9436000-7f75b9437000 ---p 00000000 00:00 0 
+7f75b9437000-7f75b9c37000 rw-p 00000000 00:00 0 
+7f75b9c37000-7f75b9c38000 ---p 00000000 00:00 0 
+7f75b9c38000-7f75ba438000 rw-p 00000000 00:00 0 
+7f75ba438000-7f75ba439000 ---p 00000000 00:00 0 
+7f75ba439000-7f75bac39000 rw-p 00000000 00:00 0 
+7f75bac39000-7f75bac3a000 ---p 00000000 00:00 0 
+7f75bac3a000-7f75bb43a000 rw-p 00000000 00:00 0 
+7f75bb43a000-7f75bb43b000 ---p 00000000 00:00 0 
+7f75bb43b000-7f75bbc3b000 rw-p 00000000 00:00 0 
+7f75bbc3b000-7f75bbc3c000 ---p 00000000 00:00 0 
+7f75bbc3c000-7f75bc43c000 rw-p 00000000 00:00 0 
+7f75bc43c000-7f75bc43d000 ---p 00000000 00:00 0 
+7f75bc43d000-7f75bcc3d000 rw-p 00000000 00:00 0 
+7f75bcc3d000-7f75bcc3e000 ---p 00000000 00:00 0 
+7f75bcc3e000-7f75bd43e000 rw-p 00000000 00:00 0 
+7f75bd43e000-7f75bd43f000 ---p 00000000 00:00 0 
+7f75bd43f000-7f75bdc3f000 rw-p 00000000 00:00 0 
+7f75bdc3f000-7f75bdc40000 ---p 00000000 00:00 0 
+7f75bdc40000-7f75be440000 rw-p 00000000 00:00 0 
+7f75be440000-7f75be441000 ---p 00000000 00:00 0 
+7f75be441000-7f75bec41000 rw-p 00000000 00:00 0 
+7f75bec41000-7f75bec42000 ---p 00000000 00:00 0 
+7f75bec42000-7f75bf442000 rw-p 00000000 00:00 0 
+7f75c4000000-7f75c4021000 rw-p 00000000 00:00 0 
+7f75c4021000-7f75c8000000 ---p 00000000 00:00 0 
+7f75c82e7000-7f75ef2fe000 rw-p 00000000 00:00 0 
+7f75ef2fe000-7f75ef325000 r-xp 00000000 08:15 68109236                   /usr/lib64/libmlx5.so.1.8.22.4
+7f75ef325000-7f75ef524000 ---p 00027000 08:15 68109236                   /usr/lib64/libmlx5.so.1.8.22.4
+7f75ef524000-7f75ef525000 r--p 00026000 08:15 68109236                   /usr/lib64/libmlx5.so.1.8.22.4
+7f75ef525000-7f75ef526000 rw-p 00027000 08:15 68109236                   /usr/lib64/libmlx5.so.1.8.22.4
+7f75ef526000-7f75ef536000 r-xp 00000000 08:15 68029730                   /usr/lib64/libucm.so.0.1.0
+7f75ef536000-7f75ef735000 ---p 00010000 08:15 68029730                   /usr/lib64/libucm.so.0.1.0
+7f75ef735000-7f75ef736000 r--p 0000f000 08:15 68029730                   /usr/lib64/libucm.so.0.1.0
+7f75ef736000-7f75ef737000 rw-p 00010000 08:15 68029730                   /usr/lib64/libucm.so.0.1.0
+7f75ef737000-7f75ef738000 rw-p 00000000 00:00 0 
+7f75ef738000-7f75ef795000 r-xp 00000000 08:15 68029748                   /usr/lib64/libuct.so.0.1.0
+7f75ef795000-7f75ef994000 ---p 0005d000 08:15 68029748                   /usr/lib64/libuct.so.0.1.0
+7f75ef994000-7f75ef995000 r--p 0005c000 08:15 68029748                   /usr/lib64/libuct.so.0.1.0
+7f75ef995000-7f75ef99c000 rw-p 0005d000 08:15 68029748                   /usr/lib64/libuct.so.0.1.0
+7f75ef99c000-7f75ef9c4000 r-xp 00000000 08:15 68029742                   /usr/lib64/libucs.so.0.1.0
+7f75ef9c4000-7f75efbc3000 ---p 00028000 08:15 68029742                   /usr/lib64/libucs.so.0.1.0
+7f75efbc3000-7f75efbc4000 r--p 00027000 08:15 68029742                   /usr/lib64/libucs.so.0.1.0
+7f75efbc4000-7f75efbc6000 rw-p 00028000 08:15 68029742                   /usr/lib64/libucs.so.0.1.0
+7f75efbc6000-7f75efbc9000 rw-p 00000000 00:00 0 
+7f75efbc9000-7f75efbde000 r-xp 00000000 08:15 67428108                   /usr/lib64/libz.so.1.2.7
+7f75efbde000-7f75efddd000 ---p 00015000 08:15 67428108                   /usr/lib64/libz.so.1.2.7
+7f75efddd000-7f75efdde000 r--p 00014000 08:15 67428108                   /usr/lib64/libz.so.1.2.7
+7f75efdde000-7f75efddf000 rw-p 00015000 08:15 67428108                   /usr/lib64/libz.so.1.2.7
+7f75efddf000-7f75efe21000 r-xp 00000000 08:15 68029736                   /usr/lib64/libucp.so.0.1.0
+7f75efe21000-7f75f0020000 ---p 00042000 08:15 68029736                   /usr/lib64/libucp.so.0.1.0
+7f75f0020000-7f75f0021000 r--p 00041000 08:15 68029736                   /usr/lib64/libucp.so.0.1.0
+7f75f0021000-7f75f0023000 rw-p 00042000 08:15 68029736                   /usr/lib64/libucp.so.0.1.0
+7f75f0023000-7f75f0024000 rw-p 00000000 00:00 0 
+7f75f0024000-7f75f0065000 r-xp 00000000 08:13 17692550                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libmlx-fi.so
+7f75f0065000-7f75f0265000 ---p 00041000 08:13 17692550                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libmlx-fi.so
+7f75f0265000-7f75f0268000 rw-p 00041000 08:13 17692550                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libmlx-fi.so
+7f75f0268000-7f75f026c000 r-xp 00000000 08:15 67236549                   /usr/lib64/libuuid.so.1.3.0
+7f75f026c000-7f75f046b000 ---p 00004000 08:15 67236549                   /usr/lib64/libuuid.so.1.3.0
+7f75f046b000-7f75f046c000 r--p 00003000 08:15 67236549                   /usr/lib64/libuuid.so.1.3.0
+7f75f046c000-7f75f046d000 rw-p 00004000 08:15 67236549                   /usr/lib64/libuuid.so.1.3.0
+7f75f046d000-7f75f05bb000 r-xp 00000000 08:13 17692551                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libpsm3-fi.so
+7f75f05bb000-7f75f07ba000 ---p 0014e000 08:13 17692551                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libpsm3-fi.so
+7f75f07ba000-7f75f07c2000 rw-p 0014d000 08:13 17692551                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libpsm3-fi.so
+7f75f07c2000-7f75f07ea000 rw-p 00000000 00:00 0 
+7f75f07ea000-7f75f084c000 r-xp 00000000 08:15 67232709                   /usr/lib64/libpsm2.so.2.1
+7f75f084c000-7f75f0a4c000 ---p 00062000 08:15 67232709                   /usr/lib64/libpsm2.so.2.1
+7f75f0a4c000-7f75f0a4d000 r--p 00062000 08:15 67232709                   /usr/lib64/libpsm2.so.2.1
+7f75f0a4d000-7f75f0a4e000 rw-p 00063000 08:15 67232709                   /usr/lib64/libpsm2.so.2.1
+7f75f0a4e000-7f75f0a50000 rw-p 00000000 00:00 0 
+7f75f0a50000-7f75f0ac8000 r-xp 00000000 08:13 17692552                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libpsmx2-fi.so
+7f75f0ac8000-7f75f0cc8000 ---p 00078000 08:13 17692552                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libpsmx2-fi.so
+7f75f0cc8000-7f75f0cce000 rw-p 00078000 08:13 17692552                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libpsmx2-fi.so
+7f75f0cce000-7f75f0cd2000 rw-p 00000000 00:00 0 
+7f75f0cd2000-7f75f0d26000 r-xp 00000000 08:13 17692553                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/librxm-fi.so
+7f75f0d26000-7f75f0f25000 ---p 00054000 08:13 17692553                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/librxm-fi.so
+7f75f0f25000-7f75f0f29000 rw-p 00053000 08:13 17692553                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/librxm-fi.so
+7f75f0f29000-7f75f0f79000 r-xp 00000000 08:13 17692554                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libshm-fi.so
+7f75f0f79000-7f75f1178000 ---p 00050000 08:13 17692554                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libshm-fi.so
+7f75f1178000-7f75f117c000 rw-p 0004f000 08:13 17692554                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libshm-fi.so
+7f75f117c000-7f75f11d7000 r-xp 00000000 08:13 17692555                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libsockets-fi.so
+7f75f11d7000-7f75f13d6000 ---p 0005b000 08:13 17692555                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libsockets-fi.so
+7f75f13d6000-7f75f13da000 rw-p 0005a000 08:13 17692555                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libsockets-fi.so
+7f75f13da000-7f75f141f000 r-xp 00000000 08:13 17692556                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libtcp-fi.so
+7f75f141f000-7f75f161f000 ---p 00045000 08:13 17692556                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libtcp-fi.so
+7f75f161f000-7f75f1622000 rw-p 00045000 08:13 17692556                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libtcp-fi.so
+7f75f1622000-7f75f1640000 r-xp 00000000 08:15 67253597                   /usr/lib64/libnl-3.so.200.23.0
+7f75f1640000-7f75f1840000 ---p 0001e000 08:15 67253597                   /usr/lib64/libnl-3.so.200.23.0
+7f75f1840000-7f75f1842000 r--p 0001e000 08:15 67253597                   /usr/lib64/libnl-3.so.200.23.0
+7f75f1842000-7f75f1843000 rw-p 00020000 08:15 67253597                   /usr/lib64/libnl-3.so.200.23.0
+7f75f1843000-7f75f18a7000 r-xp 00000000 08:15 67265668                   /usr/lib64/libnl-route-3.so.200.23.0
+7f75f18a7000-7f75f1aa6000 ---p 00064000 08:15 67265668                   /usr/lib64/libnl-route-3.so.200.23.0
+7f75f1aa6000-7f75f1aa9000 r--p 00063000 08:15 67265668                   /usr/lib64/libnl-route-3.so.200.23.0
+7f75f1aa9000-7f75f1aae000 rw-p 00066000 08:15 67265668                   /usr/lib64/libnl-route-3.so.200.23.0
+7f75f1aae000-7f75f1ab0000 rw-p 00000000 00:00 0 
+7f75f1ab0000-7f75f1ac8000 r-xp 00000000 08:15 68109205                   /usr/lib64/libibverbs.so.1.5.22.4
+7f75f1ac8000-7f75f1cc7000 ---p 00018000 08:15 68109205                   /usr/lib64/libibverbs.so.1.5.22.4
+7f75f1cc7000-7f75f1cc8000 r--p 00017000 08:15 68109205                   /usr/lib64/libibverbs.so.1.5.22.4
+7f75f1cc8000-7f75f1cc9000 rw-p 00018000 08:15 68109205                   /usr/lib64/libibverbs.so.1.5.22.4
+7f75f1cc9000-7f75f1cde000 r-xp 00000000 08:15 68109375                   /usr/lib64/librdmacm.so.1.1.22.4
+7f75f1cde000-7f75f1edd000 ---p 00015000 08:15 68109375                   /usr/lib64/librdmacm.so.1.1.22.4
+7f75f1edd000-7f75f1ede000 r--p 00014000 08:15 68109375                   /usr/lib64/librdmacm.so.1.1.22.4
+7f75f1ede000-7f75f1edf000 rw-p 00015000 08:15 68109375                   /usr/lib64/librdmacm.so.1.1.22.4
+7f75f1edf000-7f75f1ee0000 rw-p 00000000 00:00 0 
+7f75f1ee0000-7f75f1f37000 r-xp 00000000 08:13 17692557                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libverbs-1.1-fi.so
+7f75f1f37000-7f75f2136000 ---p 00057000 08:13 17692557                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libverbs-1.1-fi.so
+7f75f2136000-7f75f213a000 rw-p 00056000 08:13 17692557                   /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/prov/libverbs-1.1-fi.so
+7f75f213a000-7f75f2183000 r-xp 00000000 08:13 211786843                  /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/libfabric.so.1
+7f75f2183000-7f75f2382000 ---p 00049000 08:13 211786843                  /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/libfabric.so.1
+7f75f2382000-7f75f2385000 rw-p 00048000 08:13 211786843                  /opt/intel/oneapi/mpi/2021.6.0/libfabric/lib/libfabric.so.1
+7f75f2385000-7f75f2386000 rw-p 00000000 00:00 0 
+7f75f2386000-7f75f2390000 r-xp 00000000 08:15 67828149                   /usr/lib64/libnuma.so.1.0.0
+7f75f2390000-7f75f2590000 ---p 0000a000 08:15 67828149                   /usr/lib64/libnuma.so.1.0.0
+7f75f2590000-7f75f2591000 r--p 0000a000 08:15 67828149                   /usr/lib64/libnuma.so.1.0.0
+7f75f2591000-7f75f2592000 rw-p 0000b000 08:15 67828149                   /usr/lib64/libnuma.so.1.0.0
+7f75f2592000-7f75f25a7000 r-xp 00000000 08:15 75352135                   /usr/lib64/libgcc_s-4.8.5-20150702.so.1
+7f75f25a7000-7f75f27a6000 ---p 00015000 08:15 75352135                   /usr/lib64/libgcc_s-4.8.5-20150702.so.1
+7f75f27a6000-7f75f27a7000 r--p 00014000 08:15 75352135                   /usr/lib64/libgcc_s-4.8.5-20150702.so.1
+7f75f27a7000-7f75f27a8000 rw-p 00015000 08:15 75352135                   /usr/lib64/libgcc_s-4.8.5-20150702.so.1
+7f75f27a8000-7f75f296c000 r-xp 00000000 08:15 67233657                   /usr/lib64/libc-2.17.so
+7f75f296c000-7f75f2b6b000 ---p 001c4000 08:15 67233657                   /usr/lib64/libc-2.17.so
+7f75f2b6b000-7f75f2b6f000 r--p 001c3000 08:15 67233657                   /usr/lib64/libc-2.17.so
+7f75f2b6f000-7f75f2b71000 rw-p 001c7000 08:15 67233657                   /usr/lib64/libc-2.17.so
+7f75f2b71000-7f75f2b76000 rw-p 00000000 00:00 0 
+7f75f2b76000-7f75f2b9b000 r-xp 00000000 08:15 67608744                   /usr/lib64/libgomp.so.1.0.0
+7f75f2b9b000-7f75f2d9a000 ---p 00025000 08:15 67608744                   /usr/lib64/libgomp.so.1.0.0
+7f75f2d9a000-7f75f2d9b000 r--p 00024000 08:15 67608744                   /usr/lib64/libgomp.so.1.0.0
+7f75f2d9b000-7f75f2d9c000 rw-p 00025000 08:15 67608744                   /usr/lib64/libgomp.so.1.0.0
+7f75f2d9c000-7f75f2d9e000 r-xp 00000000 08:15 67828018                   /usr/lib64/libdl-2.17.so
+7f75f2d9e000-7f75f2f9e000 ---p 00002000 08:15 67828018                   /usr/lib64/libdl-2.17.so
+7f75f2f9e000-7f75f2f9f000 r--p 00002000 08:15 67828018                   /usr/lib64/libdl-2.17.so
+7f75f2f9f000-7f75f2fa0000 rw-p 00003000 08:15 67828018                   /usr/lib64/libdl-2.17.so
+7f75f2fa0000-7f75f2fb7000 r-xp 00000000 08:15 67531253                   /usr/lib64/libpthread-2.17.so
+7f75f2fb7000-7f75f31b6000 ---p 00017000 08:15 67531253                   /usr/lib64/libpthread-2.17.so
+7f75f31b6000-7f75f31b7000 r--p 00016000 08:15 67531253                   /usr/lib64/libpthread-2.17.so
+7f75f31b7000-7f75f31b8000 rw-p 00017000 08:15 67531253                   /usr/lib64/libpthread-2.17.so
+7f75f31b8000-7f75f31bc000 rw-p 00000000 00:00 0 
+7f75f31bc000-7f75f31c3000 r-xp 00000000 08:15 67828025                   /usr/lib64/librt-2.17.so
+7f75f31c3000-7f75f33c2000 ---p 00007000 08:15 67828025                   /usr/lib64/librt-2.17.so
+7f75f33c2000-7f75f33c3000 r--p 00006000 08:15 67828025                   /usr/lib64/librt-2.17.so
+7f75f33c3000-7f75f33c4000 rw-p 00007000 08:15 67828025                   /usr/lib64/librt-2.17.so
+7f75f33c4000-7f75f34c5000 r-xp 00000000 08:15 67828019                   /usr/lib64/libm-2.17.so
+7f75f34c5000-7f75f36c4000 ---p 00101000 08:15 67828019                   /usr/lib64/libm-2.17.so
+7f75f36c4000-7f75f36c5000 r--p 00100000 08:15 67828019                   /usr/lib64/libm-2.17.so
+7f75f36c5000-7f75f36c6000 rw-p 00101000 08:15 67828019                   /usr/lib64/libm-2.17.so
+7f75f36c6000-7f75f44f3000 r-xp 00000000 08:13 17692544                   /opt/intel/oneapi/mpi/2021.6.0/lib/release/libmpi.so.12.0.0
+7f75f44f3000-7f75f46f3000 ---p 00e2d000 08:13 17692544                   /opt/intel/oneapi/mpi/2021.6.0/lib/release/libmpi.so.12.0.0
+7f75f46f3000-7f75f4704000 r--p 00e2d000 08:13 17692544                   /opt/intel/oneapi/mpi/2021.6.0/lib/release/libmpi.so.12.0.0
+7f75f4704000-7f75f4718000 rw-p 00e3e000 08:13 17692544                   /opt/intel/oneapi/mpi/2021.6.0/lib/release/libmpi.so.12.0.0
+7f75f4718000-7f75f4f0e000 rw-p 00000000 00:00 0 
+7f75f4f0e000-7f75f4f30000 r-xp 00000000 08:15 68072435                   /usr/lib64/ld-2.17.so
+7f75f4f3e000-7f75f50d0000 rw-p 00000000 00:00 0 
+7f75f50d7000-7f75f5102000 rw-p 00000000 00:00 0 
+7f75f5115000-7f75f512f000 rw-p 00000000 00:00 0 
+7f75f512f000-7f75f5130000 r--p 00021000 08:15 68072435                   /usr/lib64/ld-2.17.so
+7f75f5130000-7f75f5131000 rw-p 00022000 08:15 68072435                   /usr/lib64/ld-2.17.so
+7f75f5131000-7f75f5132000 rw-p 00000000 00:00 0 
+7ffe169b6000-7ffe169d7000 rw-p 00000000 00:00 0                          [stack]
+7ffe169de000-7ffe169e0000 r-xp 00000000 00:00 0                          [vdso]
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 0 PID 129116 RUNNING AT XeonGold5122
+=   KILLED BY SIGNAL: 6 (Aborted)
+===================================================================================

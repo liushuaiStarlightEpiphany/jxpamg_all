@@ -1,0 +1,509 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[UTF8]{ctex}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{caption}
+\usepackage{array}
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+
+\title{CPR-GMRES求解器单进程性能对比测试报告}
+\author{}
+\date{测试日期：2026年6月9日}
+
+\begin{document}
+\maketitle
+
+\section{实验目的}
+
+对比以下三种CPR-GMRES求解器在单进程（NP=1）下的求解性能，分析混合精度策略对求解效率和收敛性的影响：
+\begin{itemize}
+  \item \textbf{原始双精度求解器}（\texttt{test\_bsr\_cprgmres}）：全双精度 CPR-GMRES，收敛容差 $10^{-4}$
+  \item \textbf{混合精度 GMRES 求解器}（\texttt{test\_bsr\_cprgmres\_hybrid}）：外层双精度 GMRES，内层单精度 CPR 预处理，收敛容差 $10^{-6}$
+  \item \textbf{迭代精化求解器}（\texttt{test\_bsr\_cprgmres\_mixed}）：双精度外残差校正 + 单精度内层 GMRES 求解的 IR 方案，收敛容差 $10^{-6}$
+\end{itemize}
+
+\section{实验环境}
+
+\begin{itemize}
+  \item 硬件平台：XeonGold5122
+  \item 编译器：mpicc（GCC 6.1.0），开启 -O3 优化
+  \item MPI环境：Intel MPI 2021.6.0，单进程运行
+\end{itemize}
+
+\section{测试问题}
+
+\begin{itemize}
+  \item 测试矩阵：SPE10 油藏模型，BSR格式，块大小 $2 \times 2$
+  \item 标量维度：$2\,188\,844 \times 2\,188\,844$
+  \item 非零块数：$7\,478\,310$
+  \item 解耦方法：True-IMPES
+  \item Krylov子空间维度：30
+\end{itemize}
+
+\section{三种cpr-gmres方法核心性能指标对比}
+
+本实验在单进程（NP=1）下运行，针对同一油藏模拟线性系统，分别测试三种 CPR-GMRES 求解器的性能，stage2使用GS磨光2次。
+\begin{table}[htbp]
+\centering
+\caption{三种求解器单进程性能对比}
+\label{tab:compare}
+\begin{tabular}{lrrr}
+\toprule
+指标 & 原始双精度 & Hybrid & Mixed (IR) \\
+\midrule
+\textbf{Setup 阶段} \\
+~ Decoupling 时间 (s) & 0.1053 & 0.1011 & 0.0848 \\
+~ CPR Setup 时间 (s)  & 1.9519 & 1.4817 & 1.4310 \\
+~ GMRES Setup 时间 (s)& 0.0029 & ---    & 0.0028 \\
+~ Setup 总时间 (s)    & 2.0602 & 1.5828 & 1.5185 \\
+\midrule
+\textbf{Solve 阶段} \\
+~ Precond 总时间 (s)  & 27.29  & 18.05  & --- \\
+~ Solve 时间 (s)      & 34.62  & 25.90  & 53.46 \\
+\midrule
+\textbf{总计} \\
+~ Total 时间 (s)      & 36.68  & 27.38  & 54.98 \\
+\midrule
+\textbf{收敛信息} \\
+~ 迭代次数            & 25     & 30     & 19 (IR) \\
+~ 收敛容差            & $10^{-4}$ & $10^{-6}$ & $10^{-6}$ \\
+~ 最终相对残量        & $9.13\times10^{-5}$ & $2.76\times10^{-5}$ & $6.15\times10^{-5}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+  从上表可以看出，Hybrid 方案仅通过将 CPR 预处理单精度化，即以轻微的迭代次数增加换取了显著的每步加速，整体有效；而 Mixed IR 将整个内层求解器下沉至单精度，虽然降低了单次内迭代开销，但受限于内迭代次数过多，总代价超过原始双精度方案。
+
+\newpage
+\section{逐迭代步收敛对比}
+
+表~\ref{tab:gmres_residual} 给出了三种 CPR-GMRES 求解器在单进程求解过程中，外层迭代步数与相对残量范数的变化历程。
+
+\begin{table}[htbp]
+\centering
+\caption{逐迭代步相对残量对比（Original \& Hybrid）}
+\label{tab:gmres_residual}
+\begin{tabular}{crrr}
+\toprule
+迭代步 & 原始双精度 & Hybrid \\
+\midrule
+ 1 & $2.3164\times10^{-1}$ & $2.0430\times10^{-1}$ & $1.6765\times10^{-1}$ \\
+ 5 & $1.2934\times10^{-2}$ & $1.3293\times10^{-2}$ & $2.1748\times10^{-2}$ \\
+10 & $3.2809\times10^{-3}$ & $3.3352\times10^{-3}$ & $2.3449\times10^{-3}$ \\
+15 & $1.1715\times10^{-3}$ & $1.1647\times10^{-3}$ & $3.2562\times10^{-4}$ \\
+20 & $3.5912\times10^{-4}$ & $3.5883\times10^{-4}$ & $6.1462\times10^{-5}$ \\
+25 & $9.1281\times10^{-5}$ & $9.2186\times10^{-5}$ & 上面为第19步 \\
+30 & ---                  & $2.7649\times10^{-5}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Hybrid 仅将 CPR 预处理下沉至单精度，外层 GMRES 仍以双精度维持收敛方向，故残差历史与原始方案高度一致，仅需少量额外迭代即可达标，同时单次迭代成本显著降低，整体收益为正。而 Mixed IR 将整个求解器置于单精度内层，外迭代虽在双精度校正下收敛迅速，但内层精度不足导致每次外迭代需多次内迭代才能满足内收敛要求，总计算量过大，抵消了单精度加速的收益。
+
+\newpage
+
+\section{mixed策略内外迭代明细}
+
+表~\ref{tab:ir_inner_detail} 展示了混合精度迭代精化（Mixed IR）求解器在单进程求解过程中，前 3 次 IR 外迭代的内层 GMRES 逐步残量明细。
+\begin{table}[htpb]
+    \centering
+    \caption{Mixed (IR) 前3步内外迭代逐步残量明细}
+    \label{tab:ir_inner_detail}
+    \begin{tabular}{ccll}
+    \toprule
+    IR 外迭代 & 内层 GMRES 步 & 残量范数 & 相对残量（对内层右端项） \\
+    \midrule
+    \multirow{5}{*}{0}
+     & 1 & $2.7128\times10^{+0}$ & $2.9995\times10^{-1}$ \\
+     & 2 & $2.2572\times10^{+0}$ & $2.4957\times10^{-1}$ \\
+     & 3 & $1.9863\times10^{+0}$ & $2.1962\times10^{-1}$ \\
+     & 4 & $1.7299\times10^{+0}$ & $1.9127\times10^{-1}$ \\
+     & 5 & $1.5146\times10^{+0}$ & $1.6746\times10^{-1}$ \\
+    \cmidrule(lr){1-4}
+     & \multicolumn{3}{l}{$\rightarrow$ IR 外残量：$1.5163\times10^{+0}$（相对原始右端项：$1.6765\times10^{-1}$）} \\
+    \midrule
+    \multirow{5}{*}{1}
+     & 1 & $1.3417\times10^{+0}$ & $8.8494\times10^{-1}$ \\
+     & 2 & $1.2039\times10^{+0}$ & $7.9400\times10^{-1}$ \\
+     & 3 & $1.0657\times10^{+0}$ & $7.0290\times10^{-1}$ \\
+     & 4 & $9.1582\times10^{-1}$ & $6.0402\times10^{-1}$ \\
+     & 5 & $8.0779\times10^{-1}$ & $5.3277\times10^{-1}$ \\
+    \cmidrule(lr){1-4}
+     & \multicolumn{3}{l}{$\rightarrow$ IR 外残量：$8.0930\times10^{-1}$（相对原始右端项：$8.9483\times10^{-2}$）} \\
+    \midrule
+    \multirow{5}{*}{2}
+     & 1 & $7.2440\times10^{-1}$ & $8.9514\times10^{-1}$ \\
+     & 2 & $6.5271\times10^{-1}$ & $8.0656\times10^{-1}$ \\
+     & 3 & $5.9554\times10^{-1}$ & $7.3592\times10^{-1}$ \\
+     & 4 & $5.4717\times10^{-1}$ & $6.7614\times10^{-1}$ \\
+     & 5 & $4.9559\times10^{-1}$ & $6.1240\times10^{-1}$ \\
+    \cmidrule(lr){1-4}
+     & \multicolumn{3}{l}{$\rightarrow$ IR 外残量：$4.9570\times10^{-1}$（相对原始右端项：$5.4809\times10^{-2}$）} \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+    
+    内层不充分的收敛是 Mixed IR 在当前配置下低效的根源。若欲使 IR 方案有效，必须显著增强内层求解能力（如增加内迭代次数或引入更有效的预条件），或结合多右端技术摊薄内层开销，否则难以在单右端问题中体现性能优势。
+
+    \newpage
+
+    \section{混合精度求解器hybrid并行扩展性（NP=1 vs NP=4）}
+
+    表~\ref{tab:hybrid_scaling} 展示了混合精度 GMRES 求解器（Hybrid）在单进程（NP=1）与四进程（NP=4）配置下的性能对比。测试算例与前文一致，收敛容差均为 $10^{-6}$。主要计时指标定义同表~\ref{tab:compare}。加速比按 NP=1 时间除以 NP=4 时间计算，反映从单进程到四进程的强可扩展性。
+
+\begin{table}[htbp]
+\centering
+\caption{Hybrid 求解器 NP=1 与 NP=4 性能对比}
+\label{tab:hybrid_scaling}
+\begin{tabular}{lrrr}
+\toprule
+指标 & NP=1 & NP=4 & 加速比 \\
+\midrule
+\textbf{Setup 阶段} \\
+~ Decoupling 时间 (s) & 0.1011 & 0.0783 & 1.29$\times$ \\
+~ CPR Setup 时间 (s)  & 1.4817 & 0.8963 & 1.65$\times$ \\
+~ Setup 总时间 (s)    & 1.5828 & 0.9746 & 1.62$\times$ \\
+\midrule
+\textbf{Solve 阶段} \\
+~ Precond 总时间 (s)  & 18.05  & 6.42   & 2.81$\times$ \\
+~ Solve 时间 (s)      & 25.90  & 8.20   & 3.16$\times$ \\
+\midrule
+\textbf{总计} \\
+~ Total 时间 (s)      & 27.38  & 9.10   & 3.01$\times$ \\
+\midrule
+\textbf{收敛信息} \\
+~ 迭代次数            & 30     & 30     & --- \\
+~ 最终相对残量        & $2.76\times10^{-5}$ & $2.60\times10^{-5}$ & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+将 NP=4 下的 Hybrid 总时间（9.10 s）与 NP=1 下的原始双精度总时间（36.68 s，见表~\ref{tab:compare}）相比，混合精度策略与四进程并行共同带来了约 4.03 倍的整体加速。两者优势可有效叠加，进一步验证了 Hybrid 方案作为并行基准的潜力。
+
+\newpage
+
+\section{混合精度求解器hybrid并行扩展性（NP=1 vs NP=4）}
+
+表~\ref{tab:mixed_scaling} 对比了混合精度迭代精化（Mixed IR）求解器在单进程（NP=1）与四进程（NP=4）下的性能表现。两者均采用双精度外残差校正与单精度内层 GMRES 求解的 IR 框架，收敛容差设为 $10^{-6}$，每次外迭代固定执行 5 次单精度内迭代。
+
+\begin{table}[htbp]
+    \centering
+    \caption{Mixed (IR) 求解器 NP=1 与 NP=4 性能对比}
+    \label{tab:mixed_scaling}
+    \begin{tabular}{lrrr}
+    \toprule
+    指标 & NP=1 & NP=4 & 加速比 \\
+    \midrule
+    \textbf{Setup 阶段} \\
+    ~ Decoupling 时间 (s) & 0.0848 & 0.0802 & 1.06$\times$ \\
+    ~ CPR Setup 时间 (s)  & 1.4310 & 1.5299 & 0.94$\times$ \\
+    ~ Setup 总时间 (s)    & 1.5185 & 1.6131 & 0.94$\times$ \\
+    \midrule
+    \textbf{Solve 阶段} \\
+    ~ Precond 总时间 (s)  & ---    & ---    & --- \\
+    ~ Solve 时间 (s)      & 53.46  & 82.25  & 0.65$\times$ \\
+    \midrule
+    \textbf{总计} \\
+    ~ Total 时间 (s)      & 54.98  & 83.86  & 0.66$\times$ \\
+    \midrule
+    \textbf{收敛信息} \\
+    ~ 迭代次数            & 19 (IR) & 50 (IR) & --- \\
+    ~ 最终相对残量        & $6.15\times10^{-5}$ & $7.30\times10^{-2}$ & --- \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+
+    并行计算引入的浮点运算非确定性（如求和次序变化、通信舍入误差）使内层单精度求解提供的校正量精度进一步劣化，外残差方程无法被足够精确地近似满足，导致外迭代失去收敛驱动力。这一数值失稳将 IR 方案的“可能缓慢收敛”变为“完全不可靠”。
+    
+\clearpage
+\section{附录：可调参数参考}
+
+以下列出当前CPR-GMRES求解器中所有可调参数，按模块分类。标注"*"者为当前测试中实际使用的值。
+
+\subsection{命令行参数（所有求解器共用）}
+
+\begin{table}[htbp]
+\centering
+\caption{命令行参数}
+\label{tab:params_cmdline}
+\begin{tabular}{llll}
+\toprule
+参数 & 位置 & 默认值 & 说明 \\
+\midrule
+\texttt{matrix\_file} & argv[1] & --- & 矩阵文件路径 \\
+\texttt{matrix\_type} & argv[2] & --- & 矩阵类型：0=CSR, 1=BSR \\
+\texttt{binary} & argv[3] & 0 & 文件格式：0=文本, 1=二进制 \\
+\texttt{rhs\_file} & argv[4] & NULL & 右端项文件路径（可选） \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{GMRES 求解器参数}
+
+\subsubsection*{原始双精度求解器（\texttt{test\_bsr\_cprgmres.c}）}
+
+\begin{table}[htbp]
+\centering
+\caption{原始双精度求解器 GMRES 参数（代码中硬编码）}
+\label{tab:params_orig_gmres}
+\begin{tabular}{llll}
+\toprule
+参数名 & 类型 & 当前值 * & 说明 \\
+\midrule
+\texttt{k\_dim} & int & 30 & Krylov子空间维度 \\
+\texttt{max\_iter} & int & 100 & 最大GMRES迭代次数 \\
+\texttt{tol} & double & 1e-4 & 相对残差收敛容差 \\
+\texttt{print\_level} & int & 1 & 打印级别（0=不打印, 1=基本, 2=详细） \\
+\texttt{is\_check\_restarted} & int & 1 & 重启后检查收敛（0=关闭, 1=开启） \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection*{混合精度 GMRES（\texttt{test\_bsr\_cprgmres\_hybrid.c}）}
+
+\begin{table}[htbp]
+\centering
+\caption{Hybrid 求解器 GMRES 参数}
+\label{tab:params_hybrid_gmres}
+\begin{tabular}{llll}
+\toprule
+参数名 & 类型 & 当前值 * & 说明 \\
+\midrule
+\texttt{k\_dim} & int & 30 & Krylov子空间维度 \\
+\texttt{max\_iterations} & int & 30 & 最大GMRES迭代次数 \\
+\texttt{tolerance} & double & 1e-6 & 相对残差收敛容差 \\
+\texttt{print\_level} & int & 1 & 打印级别 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection*{IR 混合精度（\texttt{test\_bsr\_cprgmres\_mixed.c}）}
+
+\begin{table}[htbp]
+\centering
+\caption{IR 求解器参数}
+\label{tab:params_ir}
+\begin{tabular}{llll}
+\toprule
+参数名 & 类型 & 当前值 * & 说明 \\
+\midrule
+\multicolumn{4}{l}{\textbf{外层 IR 参数}} \\
+\texttt{max\_ir\_iterations} & int & 50 & 最大IR外迭代次数 \\
+\texttt{ir\_tolerance} & double & 1e-4 & 外层IR收敛容差 \\
+\multicolumn{4}{l}{\textbf{内层单精度 GMRES 参数}} \\
+\texttt{k\_dim} & int & 30 & Krylov子空间维度 \\
+\texttt{max\_iter} & int & 5 & 内层GMRES最大迭代次数 \\
+\texttt{tol} & float & 1e-2 & 内层GMRES收敛容差 \\
+\texttt{print\_level} & int & 1 & 打印级别 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{CPR 预条件器参数}
+
+所有三个求解器均通过 \texttt{JXF\_CPRSetParameter()} 和 \texttt{JXF\_CPRSetRealParameter()} 设置CPR参数。
+
+\begin{table}[htbp]
+\centering
+\caption{CPR 预条件器参数}
+\label{tab:params_cpr}
+\begin{tabular}{llll}
+\toprule
+参数名 & 类型 & 当前值 * & 说明 \\
+\midrule
+\texttt{pressure\_index} & int & 0 & 压力变量在块中的索引 \\
+\texttt{block\_size} & int & 2 & 矩阵块大小 \\
+\texttt{stage1\_maxit} & int & 1 & 阶段1(AMG压力求解)最大迭代次数 \\
+\texttt{stage2\_maxit} & int & 2/3* & 阶段2(块磨光)迭代次数 \\
+\texttt{stage1\_solver\_type} & int & 1 & 阶段1求解器类型：1=AMG \\
+\texttt{stage2\_solver\_type} & int & 2/3* & 阶段2类型：2=BGS, 3=BILU-GMRES \\
+\texttt{print\_level} & int & 1/2* & CPR打印级别 \\
+\texttt{threshold} & float & 1e-15 & 提取压力矩阵的阈值 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{PAMG（并行代数多重网格）参数}
+
+CPR的阶段1使用PAMG求解压力子系统。以下参数通过 \texttt{JXF\_PAMGSet*()} 系列函数设置，若未显式设置则使用默认值。
+
+\begin{table}[htbp]
+\centering
+\caption{PAMG 核心参数}
+\label{tab:params_pamg_core}
+\begin{tabular}{llll}
+\toprule
+参数函数 & 类型 & 默认值 & 说明 \\
+\midrule
+\texttt{SetMaxLevels} & int & 25 & 最大网格层数 \\
+\texttt{SetStrongThreshold} & float & 0.25 & 强连接阈值（越小则粗化越慢） \\
+\texttt{SetMaxRowSum} & float & 0.9 & 最大行和阈值（用于强度矩阵） \\
+\texttt{SetTruncFactor} & float & 0.0 & 插值截断因子 \\
+\texttt{SetPMaxElmts} & int & 5 & 插值每行最大元素数 \\
+\texttt{SetCoarsenType} & int & 6 & 粗化策略：0=CLJP, 6=Falgout, 8=PMIS, 10=HMIS \\
+\texttt{SetInterpType} & int & 0 & 插值类型：0=经典, 1=直接, 3=多通, 6=ExtPI \\
+\texttt{SetMeasureType} & int & 0 & 度量方式：0=局部, 1=全局 \\
+\texttt{SetCycleType} & int & 1 & 循环类型：1=V-cycle, 2=W-cycle \\
+\texttt{SetNumSweeps} & int & 1 & 每层松弛扫描次数 \\
+\texttt{SetRelaxType} & int & 3 & 松弛方法：0=Jacobi, 3=hybrid GS(前向), \\
+  &   &   & 4=hybrid GS(后向), 6=hybrid SSOR \\
+\texttt{SetRelaxOrder} & int & 1 & 松弛顺序：0=自然序, 1=CF-松弛 \\
+\texttt{SetRelaxWt} & float & 1.0 & 松弛权重（0=自动计算） \\
+\texttt{SetOuterWt} & float & 1.0 & SOR/SSOR外部松弛权重 \\
+\texttt{SetTol} & float & 1e-7 & PAMG作为求解器时的容差 \\
+\texttt{SetCoarsestSolverID} & int & 9 & 最粗层求解器：9=高斯消元 \\
+\texttt{SetCoarseThreshold} & int & 100 & 最粗层允许的最大网格点数 \\
+\texttt{SetCoarseRatio} & float & 0.75 & 粗化比例阈值 \\
+\texttt{SetNumFunctions} & int & 1 & PDE函数数（多物理场问题） \\
+\texttt{SetNodal} & int & 0 & 节点型粗化（0=标量, 1=节点） \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{PAMG 高级平滑器参数}
+\label{tab:params_pamg_smooth}
+\begin{tabular}{llll}
+\toprule
+参数函数 & 类型 & 默认值 & 说明 \\
+\midrule
+\texttt{SetSmoothType} & int & 6 & 复杂平滑器类型：6=Schwarz, 7=Pilut, \\
+  &   &   & 8=ParaSails, 9=Euclid \\
+\texttt{SetSmoothNumLevels} & int & 0 & 使用复杂平滑器的层数（0=不使用） \\
+\texttt{SetSmoothNumSweeps} & int & 1 & 复杂平滑器扫描次数 \\
+\texttt{SetVariant} & int & 0 & Schwarz变体（0=乘性, 1=加性） \\
+\texttt{SetOverlap} & int & 1 & Schwarz重叠层数 \\
+\texttt{SetDomainType} & int & 1 & 子域类型 \\
+\texttt{SetSchwarzRlxWeight} & float & 1.0 & Schwarz松弛权重 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{PAMG 聚合式多重网格参数}
+\label{tab:params_pamg_agg}
+\begin{tabular}{llll}
+\toprule
+参数函数 & 类型 & 默认值 & 说明 \\
+\midrule
+\texttt{SetAggNumLevels} & int & 0 & 聚合层数（0=不使用聚合） \\
+\texttt{SetAggInterpType} & int & 默认 & 聚合插值类型 \\
+\texttt{SetAggPMaxElmts} & int & 默认 & 聚合插值每行最大元素 \\
+\texttt{SetAggTruncFactor} & float & 默认 & 聚合插值截断因子 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{解耦（Decoupling）参数}
+
+\begin{table}[htbp]
+\centering
+\caption{解耦参数}
+\label{tab:params_decoup}
+\begin{tabular}{llll}
+\toprule
+参数名 & 类型 & 当前值 * & 说明 \\
+\midrule
+\texttt{decoup\_type} & enum & TIMPES(5) & 解耦方法枚举： \\
+  &   &   & 0=None, 1=ABF, 2=ANL, 3=SEM,  \\
+  &   &   & 4=QI, 5=TIMPES, 6=TIMPES2 \\
+\texttt{is\_thermal} & int & 0 & 是否为热力模型（影响解耦算法） \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{ILU/BILU 预条件器参数}
+
+阶段2使用BILU-GMRES时的可调参数（原始双精度求解器中使用）：
+
+\begin{table}[htbp]
+\centering
+\caption{ILU/BILU 参数}
+\label{tab:params_ilu}
+\begin{tabular}{llll}
+\toprule
+参数函数 & 类型 & 默认值 & 说明 \\
+\midrule
+\texttt{SetMaxIter} & int & 默认 & ILU求解最大迭代次数 \\
+\texttt{SetDropTol} & float & 0.0 & ILU分解丢弃阈值 \\
+\texttt{SetNxy} & int[2] & --- & 网格维度（nx, ny） \\
+\texttt{SetNpxy} & int[2] & --- & 进程划分（npx, npy） \\
+\texttt{SetNumEquns} & int & 1 & 方程数（多物理场） \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{GMRES 收敛判据参数（高级）}
+
+GMRES求解器中可选的收敛判据参数，见 \texttt{jxf\_krylov.h} 中 \texttt{jxf\_GMRESData} 结构体：
+
+\begin{table}[htbp]
+\centering
+\caption{GMRES 高级收敛参数}
+\label{tab:params_gmres_adv}
+\begin{tabular}{llll}
+\toprule
+参数函数 & 类型 & 默认值 & 说明 \\
+\midrule
+\texttt{SetMinIter} & int & 0 & 最小迭代次数 \\
+\texttt{SetAbsoluteTol} & float & 0.0 & 绝对残差容差 \\
+\texttt{SetConvergenceFactorTol} & float & 1.0 & 收敛因子阈值 \\
+\texttt{SetStopCrit} & int & 0 & 停止准则 \\
+\texttt{SetConvCriteria} & int & 0 & 收敛判据：0=相对残差范数 \\
+\texttt{SetConvFacThreshold} & float & 1.0 & 收敛因子终止阈值 \\
+\texttt{SetRelChange} & int & 0 & 是否检查相对变化 \\
+\texttt{SetLogging} & int & 1 & 日志级别（0=关闭, 1=基本, 2=详细） \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{运行脚本配置参数（\texttt{run\_test.sh} / \texttt{cpr\_test.sh}）}
+
+\begin{table}[htbp]
+\centering
+\caption{运行脚本配置参数}
+\label{tab:params_script}
+\begin{tabular}{llll}
+\toprule
+参数名 & 默认值 & 说明 \\
+\midrule
+\texttt{NP\_LIST} & "1 2 4 8 16 32" & MPI进程数列表 \\
+\texttt{METHOD} & "BILU-GMRES" & 方法标识（用于日志文件名） \\
+\texttt{DECOUP\_TYPE} & "5" (TIMPES) & 解耦类型（设为 "all" 遍历全部） \\
+\texttt{MATRIX\_FILE} & 见脚本 & 矩阵文件路径 \\
+\texttt{MATRIX\_TYPE} & "1" (BSR) & 矩阵类型 \\
+\texttt{BINARY} & "1" (二进制) & 文件格式 \\
+\texttt{RHS\_FILE} & 见脚本 & 右端项文件 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{调试与输出参数}
+
+\begin{table}[htbp]
+\centering
+\caption{调试与输出参数}
+\label{tab:params_debug}
+\begin{tabular}{llll}
+\toprule
+参数函数/变量 & 类型 & 默认值 & 说明 \\
+\midrule
+\texttt{print\_level} & int & 1 & 全局打印级别 \\
+\texttt{logging} & int & 1 & 日志记录级别 \\
+\texttt{SetLogging} & --- & 1 & PAMG日志（0=关闭, 1=基本） \\
+\texttt{SetPrintLevel} & --- & 1 & PAMG打印（0=无, 1=setup, 2=solve, 3=全部） \\
+\texttt{SetDebugFlag} & --- & 0 & 调试标记 \\
+\texttt{SetPrintFileName} & char* & NULL & 输出文件名 \\
+\texttt{SetPrintCoarseMatrix} & int & 0 & 是否打印粗网格矩阵 \\
+\texttt{log\_file\_name} & char* & NULL & GMRES日志文件名 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+以上参数覆盖了从命令行输入、求解器算法、预条件器配置到输出调试的全链路可调选项。实际使用中，可通过修改对应源文件中的参数值来调整求解行为。
+
+\end{document}
