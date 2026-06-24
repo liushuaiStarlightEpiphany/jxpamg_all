@@ -643,6 +643,83 @@ jxmp_SeqVectorFtoD(jxf_Vector *x, jx_Vector *y)
 
     return 0;
 }
+
+// 全局变量：预分配的双精度工作向量（用于混合精度CPR预条件器的Stage2）
+static jx_ParVector* g_double_r = NULL;
+static jx_ParVector* g_double_x = NULL;
+static jx_ParVector* g_double_w = NULL;
+static jx_ParBSRMatrix* g_double_A = NULL;
+
+
+
+// =============================================================
+// 混合精度CPR预条件器（单精度接口，双精度Stage2磨光）
+// stage2_type=4: 双精度BGS；stage2_type=5: 双精度HSGS
+// =============================================================
+
+JXF_Int JXF_CPRPrecond_MxP(jxf_CPRPrecond *cpr,
+                          jxf_ParBSRMatrix* par_matrix,
+                          jxf_ParVector *par_rhs,
+                          jxf_ParVector *par_sol)
+{
+    if (cpr == NULL || !cpr->is_initialized) return jxf_error_flag;
+    if (par_rhs == NULL || par_sol == NULL) return jxf_error_flag;
+
+    MPI_Comm comm = cpr->comm;
+    int myid;
+    MPI_Comm_rank(comm, &myid);
+    JXF_Real t1, t2;
+    JXF_Int i;
+
+    JXF_Int block_size = cpr->block_size;
+    JXF_Int pressure_index = cpr->pressure_index;
+
+    // Stage1: 单精度AMG求解压力子系统
+    if (jxf_RestrictPressureVector(par_rhs, cpr->rp, block_size, pressure_index) != JXF_SUCCESS)
+        return jxf_error_flag;
+    jxf_ParVectorSetConstantValues(cpr->xp, 0.0);
+    t1 = jxf_MPI_Wtime();
+    for (i = 0; i < cpr->stage1_maxit; i++) {
+        JXF_PAMGSolve(cpr->stage1_solver,
+                     (JXF_ParCSRMatrix)cpr->A_pressure,
+                     (JXF_Vector)cpr->rp,
+                     (JXF_Vector)cpr->xp);
+    }
+    t2 = jxf_MPI_Wtime();
+    cpr->stage1_solve_time += t2 - t1;
+    jxf_ProlongatePressureVector(cpr->xp, par_sol, block_size, pressure_index, 0);
+
+    // Stage2: 双精度块磨光
+    t1 = jxf_MPI_Wtime();
+
+    if (g_double_A != NULL && g_double_r != NULL && g_double_x != NULL && g_double_w != NULL) {
+        // 复制解和残差到双精度向量
+        jxmp_ParVectorFtoD(par_sol, g_double_x);
+        jxmp_ParVectorFtoD(par_rhs, g_double_r);
+
+        JX_Real relax_weight = 1.0;
+        JX_Real omega = 0.8;
+        JX_Int forward_or_backward = 1;
+
+        for (i = 0; i < cpr->stage2_maxit; i++) {
+            if (cpr->stage2_solver_type == 4)
+                jx_ParBSRHGSRelax(g_double_A, g_double_x, g_double_r, g_double_w,
+                                 relax_weight, omega, forward_or_backward);
+            else if (cpr->stage2_solver_type == 5)
+                jx_ParBSRHSGSRelax(g_double_A, g_double_x, g_double_r, g_double_w,
+                                  relax_weight, omega, forward_or_backward);
+        }
+
+        // 转回单精度
+        jxmp_ParVectorDtoF(g_double_x, par_sol);
+    }
+
+    t2 = jxf_MPI_Wtime();
+    cpr->stage2_solve_time += t2 - t1;
+
+    return JXF_SUCCESS;
+}
+
 // =============================================================
 // 迭代精化(IR)主函数
 // =============================================================
@@ -654,7 +731,8 @@ int solve_with_ir_mixed_precision(
     int max_ir_iterations,         // 最大IR迭代次数
     Real_double ir_tolerance,      // IR收敛容差
     int inner_max_iterations,      // 内部单精度求解器最大迭代
-    Real_float inner_tolerance     // 内部单精度求解器容差
+    Real_float inner_tolerance,    // 内部求解器容差
+    int stage2_type                // Stage2磨光类型: 2=BGS(单精), 4=双精BGS, 5=双精HSGS
 )
 {
 
@@ -761,7 +839,7 @@ int solve_with_ir_mixed_precision(
         JXF_CPRSetParameter(cpr, "stage1_maxit", 1);      // 阶段1迭代次数
         JXF_CPRSetParameter(cpr, "stage2_maxit", 1);      // 阶段2迭代次数
         JXF_CPRSetParameter(cpr, "stage1_solver_type", 1); // AMG求解器
-        JXF_CPRSetParameter(cpr, "stage2_solver_type", 2); // 与hybrid一致
+        JXF_CPRSetParameter(cpr, "stage2_solver_type", stage2_type);
         JXF_CPRSetParameter(cpr, "print_level", 1); // 打印等级
         
         JXF_CPRSetRealParameter(cpr, "threshold", 1e-15); // 提取压力矩阵阈值
@@ -809,11 +887,22 @@ int solve_with_ir_mixed_precision(
         JXF_GMRESSetLogging(gmres_solver, 1);
         JXF_GMRESSetPrintLevel(gmres_solver, print_level);
 
-        // 设置CPR为预条件器
-        JXF_GMRESSetPrecond(gmres_solver, 
-                          (JXF_PtrToSolverFcn)JXF_CPRPrecond,
-                          (JXF_PtrToSolverFcn)JXF_CPRSetup, 
-                          cpr);
+        // 设置预条件器（根据stage2_type选择）
+        if (stage2_type == 4 || stage2_type == 5) {
+            // 混合精度预条件器：单精AMG + 双精BGS
+            JXF_CPRSetParameter(cpr, "stage2_solver_type", stage2_type);
+            JXF_GMRESSetPrecond(gmres_solver,
+                              (JXF_PtrToSolverFcn)JXF_CPRPrecond_MxP,
+                              (JXF_PtrToSolverFcn)JXF_CPRSetup,
+                              cpr);
+        } else {
+            // 原始单精度预条件器
+            JXF_CPRSetParameter(cpr, "stage2_solver_type", stage2_type);
+            JXF_GMRESSetPrecond(gmres_solver,
+                              (JXF_PtrToSolverFcn)JXF_CPRPrecond,
+                              (JXF_PtrToSolverFcn)JXF_CPRSetup,
+                              cpr);
+        }
         
         // GMRES设置阶段
         double gmres_setup_start = MPI_Wtime();
@@ -827,22 +916,28 @@ int solve_with_ir_mixed_precision(
             fflush(stdout);  
         }
 
-    // 3. 创建双精度残差向量
+    // 3. 创建双精度残差向量和工作向量
     jx_ParVector* r_double = jx_ParVectorCreate(A_double->comm, global_scalar_size, partitioning);
-
-    jx_ParVector* dx_double = jx_ParVectorCreate(
-        A_double->comm,
-        global_scalar_size,
-        partitioning
-    );
+    jx_ParVector* dx_double = jx_ParVectorCreate(A_double->comm, global_scalar_size, partitioning);
     if (!r_double || !dx_double) {
         if (myid == 0) printf("Error creating double precision work vectors\n");
-        // 清理...
         return -1;
     }
-    
     jx_ParVectorInitialize(r_double);
     jx_ParVectorInitialize(dx_double);
+
+    // 预分配全局双精度向量（用于混合精度预条件器stage2）
+    g_double_r = jx_ParVectorCreate(A_double->comm, global_scalar_size, partitioning);
+    g_double_x = jx_ParVectorCreate(A_double->comm, global_scalar_size, partitioning);
+    g_double_w = jx_ParVectorCreate(A_double->comm, global_scalar_size, partitioning);
+    g_double_A = A_double;
+    if (!g_double_r || !g_double_x || !g_double_w) {
+        if (myid == 0) printf("Error creating global double work vectors\n");
+        return -1;
+    }
+    jx_ParVectorInitialize(g_double_r);
+    jx_ParVectorInitialize(g_double_x);
+    jx_ParVectorInitialize(g_double_w);
 
         
     // 4. IR主循环
@@ -952,7 +1047,6 @@ int solve_with_ir_mixed_precision(
         // }
         
         // 4.6 将单精度解转换为双精度并更新解
-        // 将x_float中的单精度修正量转换到dx_double中
         if (jxmp_ParVectorFtoD(x_float, dx_double) != 0) {
             if (myid == 0) printf("Error converting correction to double precision\n");
             break;
@@ -971,12 +1065,16 @@ int solve_with_ir_mixed_precision(
     }
 
 
-    // 5. 清理单精度内存
+    // 5. 清理内存
     jxf_ParBSRMatrixDestroy(A_float);
-    // jxf_ParVectorDestroy(b_float);
     jxf_ParVectorDestroy(x_float);
     jxf_ParVectorDestroy(r_float);
     jx_ParVectorDestroy(r_double);
+    jx_ParVectorDestroy(dx_double);
+    if (g_double_r) { jx_ParVectorDestroy(g_double_r); g_double_r = NULL; }
+    if (g_double_x) { jx_ParVectorDestroy(g_double_x); g_double_x = NULL; }
+    if (g_double_w) { jx_ParVectorDestroy(g_double_w); g_double_w = NULL; }
+    g_double_A = NULL;
     jxf_GMRESDestroy(gmres_solver);
     JXF_CPRDestroy(&cpr);
     
@@ -1044,6 +1142,7 @@ int main(int argc, char** argv)
             printf("  matrix_type: 0=CSR, 1=BSR\n");
             printf("  binary: 0=text, 1=binary (default: 0)\n");
             printf("  rhs_file: right-hand side file (optional)\n");
+            printf("  stage2_type: 2=BGS(单精), 4=双精BGS, 5=双精HSGS (default: 2)\n");
         }
         MPI_Finalize();
         return 1;
@@ -1053,7 +1152,7 @@ int main(int argc, char** argv)
     int matrix_type = atoi(argv[2]);
     int binary = (argc > 3) ? atoi(argv[3]) : 0;
     char* rhs_file = (argc > 4) ? argv[4] : NULL;
-    char* filename_output = (argc > 5) ? argv[5] : NULL;
+    int stage2_type = (argc > 5) ? atoi(argv[5]) : 2;
 
     // 测试BSR矩阵的CPR-GMRES
     if (myid == 0) {
@@ -1259,8 +1358,10 @@ int main(int argc, char** argv)
     if (myid == 0) {
         printf("\n=================================================\n");
         printf("Mixed Precision Iterative Refinement (IR) Solver\n");
-        printf("Using single-precision jxfpamg for inner solves\n");
-        printf("Using double-precision jxpamg for outer residuals\n");
+        printf("Stage1=单精AMG, Stage2=%s\n",
+               stage2_type == 4 ? "双精BGS" :
+               stage2_type == 5 ? "双精HSGS" : "单精BGS");
+        printf("Stage2 type: %d\n", stage2_type);
         printf("=================================================\n\n");
     }
     
@@ -1279,7 +1380,8 @@ int main(int argc, char** argv)
     int result = solve_with_ir_mixed_precision(
         A_parbsr, par_rhs, par_sol,
         max_ir_iterations, ir_tolerance,
-        inner_max_iterations, inner_tolerance);
+        inner_max_iterations, inner_tolerance,
+        stage2_type);
     
     MPI_Finalize();
     return result;
