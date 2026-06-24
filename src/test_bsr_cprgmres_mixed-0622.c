@@ -29,14 +29,6 @@ typedef double Real_double;  // 双精度
 typedef float  Real_float;   // 单精度
 
 typedef int Int;
- 
-// 双精度残差打印函数（来自bilu_double_helper.c）
-// 双精度BILU辅助函数 (使用BSR版本)
-void* bilu_double_create(void* A, int myid);
-void  bilu_double_apply(void* ctx, float* x_data, float* b_data, JX_Int nloc);
-void  bilu_double_destroy(void* ctx);
-void bilu_print_residual(void* A, void* b, void* x, MPI_Comm comm, const char* label);
-extern int bilu_print_flag;
 
 // 函数声明
 jx_BSRMatrix* read_bsr_matrix(const char* filename, int binary);
@@ -662,8 +654,7 @@ int solve_with_ir_mixed_precision(
     int max_ir_iterations,         // 最大IR迭代次数
     Real_double ir_tolerance,      // IR收敛容差
     int inner_max_iterations,      // 内部单精度求解器最大迭代
-    Real_float inner_tolerance,    // 内部单精度求解器容差
-    int stage2_type                 // 0=none 5=双精度BILU
+    Real_float inner_tolerance     // 内部单精度求解器容差
 )
 {
 
@@ -768,7 +759,7 @@ int solve_with_ir_mixed_precision(
         JXF_CPRSetParameter(cpr, "pressure_index", 0);    // 压力变量索引
         JXF_CPRSetParameter(cpr, "block_size", blk_size);
         JXF_CPRSetParameter(cpr, "stage1_maxit", 1);      // 阶段1迭代次数
-        JXF_CPRSetParameter(cpr, "stage2_maxit", 0);      // 阶段2迭代次数
+        JXF_CPRSetParameter(cpr, "stage2_maxit", 1);      // 阶段2迭代次数
         JXF_CPRSetParameter(cpr, "stage1_solver_type", 1); // AMG求解器
         JXF_CPRSetParameter(cpr, "stage2_solver_type", 2); // 与hybrid一致
         JXF_CPRSetParameter(cpr, "print_level", 1); // 打印等级
@@ -852,13 +843,8 @@ int solve_with_ir_mixed_precision(
     
     jx_ParVectorInitialize(r_double);
     jx_ParVectorInitialize(dx_double);
-    
-    // 双精度BILU设置（stage2_type=5时）
-    void* bilu_ctx = NULL;
-    if (stage2_type == 5) {
-        bilu_ctx = bilu_double_create((void*)A_double, myid);
-    }
-    
+
+        
     // 4. IR主循环
     Real_double initial_residual = 0.0;
     Real_double current_residual = 0.0;
@@ -974,16 +960,6 @@ int solve_with_ir_mixed_precision(
         
         // 更新解：x_double = x_double + dx_double
         jx_ParVectorAxpy(1.0, dx_double, x_double);
-        
-        // 双精度BILU抛光（stage2_type=5时）
-        if (stage2_type == 5) {
-            jx_Vector* xl = jx_ParVectorLocalVector(x_double);
-            jx_Vector* bl = jx_ParVectorLocalVector(b_double);
-            bilu_double_apply(bilu_ctx, (float*)jx_VectorData(xl), (float*)jx_VectorData(bl), jx_VectorSize(xl));
-            if (myid == 0) printf("BILU polishing applied\n");
-        }
-        
-        bilu_print_residual((void*)A_double, (void*)b_double, (void*)x_double, A_double->comm, "IR: after solve");
     }
     
     double IR_cprgmres_end = MPI_Wtime();
@@ -1296,16 +1272,14 @@ int main(int argc, char** argv)
     // IR参数
     int max_ir_iterations = 100;
     Real_double ir_tolerance = 1e-4;
-    int inner_max_iterations = 15;
+    int inner_max_iterations = 5;
     Real_float inner_tolerance = 1e-2;
-    int stage2_type = 2;  // 0=none, 5=双精度BILU
     
     // 调用混合精度求解
     int result = solve_with_ir_mixed_precision(
         A_parbsr, par_rhs, par_sol,
         max_ir_iterations, ir_tolerance,
-        inner_max_iterations, inner_tolerance,
-        stage2_type);
+        inner_max_iterations, inner_tolerance);
     
     MPI_Finalize();
     return result;

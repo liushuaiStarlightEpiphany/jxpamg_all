@@ -759,9 +759,9 @@ int solve_with_ir_mixed_precision(
         JXF_CPRSetParameter(cpr, "pressure_index", 0);    // 压力变量索引
         JXF_CPRSetParameter(cpr, "block_size", blk_size);
         JXF_CPRSetParameter(cpr, "stage1_maxit", 1);      // 阶段1迭代次数
-        JXF_CPRSetParameter(cpr, "stage2_maxit", 2);      // 阶段2迭代次数
+        JXF_CPRSetParameter(cpr, "stage2_maxit", 1);      // 阶段2迭代次数
         JXF_CPRSetParameter(cpr, "stage1_solver_type", 1); // AMG求解器
-        JXF_CPRSetParameter(cpr, "stage2_solver_type", 2); // 与hybrid一致
+        JXF_CPRSetParameter(cpr, "stage2_solver_type", 4); // 与hybrid一致
         JXF_CPRSetParameter(cpr, "print_level", 1); // 打印等级
         
         JXF_CPRSetRealParameter(cpr, "threshold", 1e-15); // 提取压力矩阵阈值

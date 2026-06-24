@@ -472,7 +472,7 @@ JXF_Int JXF_CPRPrecond(jxf_CPRPrecond *cpr, jxf_ParBSRMatrix* par_matrix,
         JXF_PAMGSolve(cpr->stage1_solver, 
                      (JXF_ParCSRMatrix)cpr->A_pressure,
                      (JXF_Vector)cpr->rp,
-                     (JXF_Vector)cpr->xp);
+                     (JXF_ParVector)cpr->xp);
     }
 
     t2 = jxf_MPI_Wtime();
@@ -514,6 +514,14 @@ JXF_Int JXF_CPRPrecond(jxf_CPRPrecond *cpr, jxf_ParBSRMatrix* par_matrix,
     }
     // 1.3 延拓：将压力解延拓到全局向量
     jxf_ProlongatePressureVector(cpr->xp, par_sol, block_size, pressure_index, 0);
+    // 打印AMG压力求解后的残差
+    {
+        jxf_ParVector *__r = jxf_CreateGlobalVector(cpr->A_bsr);
+        jxf_ParVectorCopy(par_rhs, __r);
+        jxf_ParBSRMatrixMatvec(-1.0, cpr->A_bsr, par_sol, 1.0, __r);
+        printf("CPR: after AMG ||r||=%.6e\n", jxf_ParVectorNorm2(__r));
+        jxf_ParVectorDestroy(__r);
+    }
 
         // 计算并打印残差范数（调试用）
     if (cpr->print_level > 1) {
@@ -587,6 +595,14 @@ JXF_Int JXF_CPRPrecond(jxf_CPRPrecond *cpr, jxf_ParBSRMatrix* par_matrix,
         }
     // jxf_ParVectorDestroy(residual);
 
+    // 打印磨光后的残差
+    {
+        jxf_ParVector *__r = jxf_CreateGlobalVector(cpr->A_bsr);
+        jxf_ParVectorCopy(par_rhs, __r);
+        jxf_ParBSRMatrixMatvec(-1.0, cpr->A_bsr, par_sol, 1.0, __r);
+        printf("CPR: after smooth ||r||=%.6e\n", jxf_ParVectorNorm2(__r));
+        jxf_ParVectorDestroy(__r);
+    }
     t2 = jxf_MPI_Wtime();
     cpr->stage2_solve_time += t2 - t1;
     

@@ -1,0 +1,10 @@
+*.o
+*.a
+*.log
+test_bsr_cprgmres
+test_bsr_cprgmres_hybrid
+test_bsr_cprgmres_mixed
+test_bsr_mv
+solver
+jxfpamg-0220/lib/
+jxfpamg-0220/tags

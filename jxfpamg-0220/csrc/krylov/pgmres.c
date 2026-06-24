@@ -1253,12 +1253,12 @@ jxf_GMRESSolve( void *gmres_vdata, void *preOperator, void *matA, void *vecB, vo
            iter ++;
            (*(gmres_functions->ClearVector))(vecR);
             JXF_Real vecR_norm_before = sqrt((*(gmres_functions->InnerProd))(vecR, vecR));
-           jxf_printf("vecR_norm_before = %lf\n", vecR_norm_before);
+           jxf_printf("vecR_norm_before = %e\n", vecR_norm_before);
             fflush(stdout); 
            precond(precond_data, preOperator, vecP[i-1], vecR);
            
             JXF_Real vecR_norm_after = sqrt((*(gmres_functions->InnerProd))(vecR, vecR));
-           jxf_printf("vecR_norm_after = %lf\n", vecR_norm_after);
+           jxf_printf("vecR_norm_after = %e\n", vecR_norm_after);
                  fflush(stdout); 
 
            (*(gmres_functions->Matvec))(matvec_data, 1.0, matA, vecR, 0.0, vecP[i]);

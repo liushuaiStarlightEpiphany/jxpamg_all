@@ -698,6 +698,7 @@ int solve_with_mixed_precision_cpr_gmres(
     double solve_start = MPI_Wtime();
     JX_GMRESSolve(gmres_solver, (JX_Matrix)A_high,
                   (JX_Matrix)A_high, (JX_Vector)b_high, (JX_Vector)x_high);
+    bilu_print_residual((void*)A_high, (void*)b_high, (void*)x_high, A_high->comm, "Hybrid: ||r||_2");
     double solve_end = MPI_Wtime();
     
     // 7. 获取求解器统计信息

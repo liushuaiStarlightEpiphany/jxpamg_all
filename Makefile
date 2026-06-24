@@ -38,6 +38,7 @@ else
 JXF_BIG_DOUBLE_OPTION = -DJXF_USING_BIG_DOUBLE=0
 endif
 
+JXF_USE_SINGLE = YES
 ifdef JXF_USE_SINGLE
 JXF_SINGLE_OPTION = -DJXF_SINGLE=1
 else
@@ -108,10 +109,10 @@ BSR_TEST_OBJS = ./src/test_bsr_mv.o
 CPR_TEST_OBJS = ./src/test_bsr_cprgmres.o
 
 # 添加混合精度目标
-MIXED_TEST_OBJS = ./src/test_bsr_cprgmres_mixed.o
+MIXED_TEST_OBJS = ./src/test_bsr_cprgmres_mixed.o ./src/bilu_double_helper.o
 
 # 添加混合精度目标
-Hybrid_TEST_OBJS = ./src/test_bsr_cprgmres_hybrid.o
+Hybrid_TEST_OBJS = ./src/test_bsr_cprgmres_hybrid.o ./src/bilu_double_helper.o
 
 all: solver test_bsr test_cpr test_mixed test_hybrid
 
