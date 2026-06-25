@@ -673,6 +673,7 @@ int solve_with_mixed_precision_cpr_gmres(
     // 设置GMRES参数
     int k_dim = 30;
     JX_GMRESSetKDim(gmres_solver, k_dim);
+    JX_GMRESSetIsCheckRestarted(gmres_solver, 1);  /* 假收敛时重启迭代而非停止 */
     JX_GMRESSetMaxIter(gmres_solver, max_iterations);
     JX_GMRESSetTol(gmres_solver, (JX_Real)tolerance);
     JX_GMRESSetPrintLevel(gmres_solver, 1);
@@ -916,7 +917,7 @@ int main(int argc, char** argv)
     // ------------------------------------------------------------
     
     // 求解器参数
-    int max_iterations = 30;
+    int max_iterations = 60;
     JX_Real tolerance = 1e-4;
     
     int result = solve_with_mixed_precision_cpr_gmres(

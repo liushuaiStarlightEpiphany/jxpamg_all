@@ -837,7 +837,7 @@ int solve_with_ir_mixed_precision(
         JXF_CPRSetParameter(cpr, "pressure_index", 0);    // 压力变量索引
         JXF_CPRSetParameter(cpr, "block_size", blk_size);
         JXF_CPRSetParameter(cpr, "stage1_maxit", 1);      // 阶段1迭代次数
-        JXF_CPRSetParameter(cpr, "stage2_maxit", 1);      // 阶段2迭代次数
+        JXF_CPRSetParameter(cpr, "stage2_maxit", 2);      // 阶段2迭代次数
         JXF_CPRSetParameter(cpr, "stage1_solver_type", 1); // AMG求解器
         JXF_CPRSetParameter(cpr, "stage2_solver_type", stage2_type);
         JXF_CPRSetParameter(cpr, "print_level", 1); // 打印等级
@@ -869,7 +869,7 @@ int solve_with_ir_mixed_precision(
         fflush(stdout); 
         
         // GMRES参数
-        int k_dim = 30;           // Krylov子空间维度
+        int k_dim = 15;           // Krylov子空间维度
         int max_iter = inner_max_iterations;      // 最大迭代次数
         float tol = inner_tolerance;          // 收敛容差
         int print_level = 1;      // 打印级别
@@ -1373,7 +1373,7 @@ int main(int argc, char** argv)
     // IR参数
     int max_ir_iterations = 100;
     Real_double ir_tolerance = 1e-4;
-    int inner_max_iterations = 5;
+    int inner_max_iterations = 3;
     Real_float inner_tolerance = 1e-2;
     
     // 调用混合精度求解
