@@ -262,8 +262,8 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
     // 步骤1: 创建低精度工作向量（总是创建新的，避免内存问题）
     // =============================================================
     
-    jxf_ParVector *low_rhs = jxf_CreateGlobalVector(cpr->A_bsr);
-    jxf_ParVector *low_sol = jxf_CreateGlobalVector(cpr->A_bsr);
+    static jxf_ParVector *low_rhs = NULL, *low_sol = NULL;
+    if (!low_rhs) { low_rhs = jxf_CreateGlobalVector(cpr->A_bsr); low_sol = jxf_CreateGlobalVector(cpr->A_bsr); }
     
     if (low_rhs == NULL || low_sol == NULL) {
         printf("Failed to create low precision vectors\n");
