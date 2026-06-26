@@ -661,8 +661,7 @@ int solve_with_mixed_precision_cpr_gmres(
         printf("Total time (setup+solve): %.6f seconds\n", 
                setup_end - setup_start + solve_end - solve_start);
     }
-    exit(0);
-    _exit(0);
+    MPI_Abort(MPI_COMM_WORLD, 0);
     
     // 8. 清理
     jx_GMRESDestroy(gmres_solver);
