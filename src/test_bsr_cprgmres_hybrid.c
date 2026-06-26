@@ -260,12 +260,6 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
     static jxf_ParVector *low_rhs = NULL, *low_sol = NULL;
     if (!low_rhs) { low_rhs = jxf_CreateGlobalVector(cpr->A_bsr); low_sol = jxf_CreateGlobalVector(cpr->A_bsr); }
     
-    if (low_rhs == NULL || low_sol == NULL) {
-        printf("Failed to create low precision vectors\n");
-        if (low_rhs) jxf_ParVectorDestroy(low_rhs);
-        if (low_sol) jxf_ParVectorDestroy(low_sol);
-        return jxf_error_flag;
-    }
     
     // =============================================================
     // 步骤2: 将高精度右端项转换为低精度
@@ -290,8 +284,6 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
     // 3.1 限制：从低精度全局残差提取压力残差
     if (jxf_RestrictPressureVector(low_rhs, cpr->rp, block_size, pressure_index) != JXF_SUCCESS) {
         printf("Failed to restrict pressure vector\n");
-        jxf_ParVectorDestroy(low_rhs);
-        jxf_ParVectorDestroy(low_sol);
         return jxf_error_flag;
     }
     
@@ -317,8 +309,6 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
     // 3.4 延拓：将低精度压力解延拓到低精度全局向量
     if (jxf_ProlongatePressureVector(cpr->xp, low_sol, block_size, pressure_index, 0) != JXF_SUCCESS) {
         printf("Failed to prolongate pressure vector\n");
-        jxf_ParVectorDestroy(low_rhs);
-        jxf_ParVectorDestroy(low_sol);
         return jxf_error_flag;
     }
     
@@ -329,8 +319,6 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
     convert_err = jxmp_ParVectorFtoD(low_sol, par_sol);
     if (convert_err != 0) {
         printf("Failed to convert solution from float to double\n");
-        jxf_ParVectorDestroy(low_rhs);
-        jxf_ParVectorDestroy(low_sol);
         return jxf_error_flag;
     }
     
@@ -338,8 +326,6 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
     // 步骤5: 清理低精度临时向量
     // =============================================================
     
-    jxf_ParVectorDestroy(low_rhs);
-    jxf_ParVectorDestroy(low_sol);
     
     // =============================================================
     // 步骤6: 高精度阶段2 - 块磨光（使用高精度函数）
@@ -347,23 +333,16 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
     
     t1 = jxf_MPI_Wtime();
     
-    // 6.1 创建高精度工作向量（用于磨光）
-    jx_ParVector *high_work = NULL;
-    
-    // 创建高精度工作向量
-    JXF_BigInt global_scalar_rows = jx_ParBSRMatrixGlobalNumRows(par_matrix) * 
-                                    jx_ParBSRMatrixBlockSize(par_matrix);
-    JXF_BigInt* partitioning = NULL;
-    jx_ParBSRMatrixGetRowPartitioning(par_matrix, &partitioning);
-    
-    high_work = jx_ParVectorCreate(par_matrix->comm, global_scalar_rows, partitioning);
-    
-    if (high_work == NULL) {
-        printf("Failed to create high precision work vector\n");
-        return jxf_error_flag;
+    // 6.1 高精度工作向量（静态）
+    static jx_ParVector *high_work = NULL;
+    if (!high_work) {
+        JXF_BigInt gsr = jx_ParBSRMatrixGlobalNumRows(par_matrix) * jx_ParBSRMatrixBlockSize(par_matrix);
+        JXF_BigInt* part = NULL;
+        jx_ParBSRMatrixGetRowPartitioning(par_matrix, &part);
+        high_work = jx_ParVectorCreate(par_matrix->comm, gsr, part);
+        jx_ParVectorInitialize(high_work);
+        if (!high_work) { printf("Failed to create work vector\n"); return jxf_error_flag; }
     }
-    
-    jx_ParVectorInitialize(high_work);
     
     // 6.2 设置磨光参数
     JX_Real relax_weight = 1.0;    // 松弛权重
@@ -390,29 +369,10 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
                          relax_weight, omega, forward_or_backward);
     }
     
-    if (cpr->print_level > 2) {
-        // 计算磨光后的残差（调试用）
-        jx_ParVector *high_temp = jx_ParVectorCreate(par_matrix->comm, global_scalar_rows, partitioning);
-        if (high_temp) {
-            jx_ParVectorInitialize(high_temp);
-            jx_ParVectorCopy(par_rhs, high_temp);
-            jx_ParBSRMatrixMatvec(-1.0, par_matrix, par_sol, 1.0, high_temp);
-            JX_Real res_after = jx_ParVectorNorm2(high_temp);
-            if (myid == 0) {
-                printf("CPR-MxP: Residual after polishing: %.6e\n", res_after);
-            }
-            jx_ParVectorDestroy(high_temp);
-        }
-    }
-    
     t2 = jxf_MPI_Wtime();
     cpr->stage2_solve_time += t2 - t1;
     
     // =============================================================
-    // 步骤7: 清理高精度工作向量
-    // =============================================================
-    
-    // high_work static
     
     // 如果有需要，可以在这里添加额外的统计信息
     if (cpr->print_level > 0 && myid == 0) {
