@@ -189,11 +189,6 @@ jxmp_SeqVectorFtoD(jxf_Vector *x, jx_Vector *y)
     return 0;
 }
 
-// 预分配双精度工作向量（避免预条件器内反复创建导致段错误）
-static jxf_ParVector* g_low_rhs = NULL;
-static jxf_ParVector* g_low_sol = NULL;
-static jx_ParVector* g_work = NULL;
-
 // =============================================================
 // 混合精度CPR预条件器接口实现
 // =============================================================
@@ -262,8 +257,8 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
     // 步骤1: 创建低精度工作向量（总是创建新的，避免内存问题）
     // =============================================================
     
-    static jxf_ParVector *low_rhs = NULL, *low_sol = NULL;
-    if (!low_rhs) { low_rhs = jxf_CreateGlobalVector(cpr->A_bsr); low_sol = jxf_CreateGlobalVector(cpr->A_bsr); }
+    jxf_ParVector *low_rhs = jxf_CreateGlobalVector(cpr->A_bsr);
+    jxf_ParVector *low_sol = jxf_CreateGlobalVector(cpr->A_bsr);
     
     if (low_rhs == NULL || low_sol == NULL) {
         printf("Failed to create low precision vectors\n");
@@ -351,9 +346,24 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
     jxf_ParVectorDestroy(low_sol);
     
     // =============================================================
-    jx_ParVector *high_work = g_work;
-    if (!high_work) { printf("g_work not allocated
-"); return jxf_error_flag; }
+    // 步骤6: 高精度阶段2 - 块磨光（使用高精度函数）
+    // =============================================================
+    
+    t1 = jxf_MPI_Wtime();
+    
+    // 6.1 创建高精度工作向量（用于磨光）
+    jx_ParVector *high_work = NULL;
+    
+    // 创建高精度工作向量
+    JXF_BigInt global_scalar_rows = jx_ParBSRMatrixGlobalNumRows(par_matrix) * 
+                                    jx_ParBSRMatrixBlockSize(par_matrix);
+    JXF_BigInt* partitioning = NULL;
+    jx_ParBSRMatrixGetRowPartitioning(par_matrix, &partitioning);
+    
+    high_work = jx_ParVectorCreate(par_matrix->comm, global_scalar_rows, partitioning);
+    
+    if (high_work == NULL) {
+        printf("Failed to create high precision work vector\n");
         return jxf_error_flag;
     }
     
@@ -417,7 +427,7 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
     // 步骤7: 清理高精度工作向量
     // =============================================================
     
-    // 全局向量由外层管理，不在此销毁
+    if (high_work) jx_ParVectorDestroy(high_work);
     
     // 如果有需要，可以在这里添加额外的统计信息
     if (cpr->print_level > 0 && myid == 0) {
@@ -656,17 +666,10 @@ int solve_with_mixed_precision_cpr_gmres(
         printf("Low precision CPR setup completed in %.6f seconds\n", setup_end - setup_start);
     }
     
-    // 3. 创建高精度BiCGSTAB求解器并预分配向量
-    JXF_BigInt gs_rows = jx_ParBSRMatrixGlobalNumRows(A_high) * jx_ParBSRMatrixBlockSize(A_high);
-    JXF_BigInt* gs_part = NULL;
-    jx_ParBSRMatrixGetRowPartitioning(A_high, &gs_part);
-    g_work = jx_ParVectorCreate(A_high->comm, gs_rows, gs_part);
-    jx_ParVectorInitialize(g_work);
-    g_low_rhs = jxf_CreateGlobalVector(A_low);
-    g_low_sol = jxf_CreateGlobalVector(A_low);
-    
+    // 3. 创建高精度BiCGSTAB求解器
+    // BSR BiCGSTAB
     JX_Solver bicgstab_solver;
-    jx_BiCGSTABFunctions *bicgstab_functions = jx_BiCGSTABFunctionsCreate(
+    jx_BiCGSTABFunctions *fg = jx_BiCGSTABFunctionsCreate(
         jx_ParBSRKrylovCreateVector, jx_ParBSRKrylovDestroyVector,
         jx_ParBSRKrylovMatvecCreate, jx_ParBSRKrylovMatvec, jx_ParBSRKrylovMatvecDestroy,
         jx_ParBSRKrylovInnerProd, jx_ParBSRKrylovCopyVector,
@@ -674,8 +677,9 @@ int solve_with_mixed_precision_cpr_gmres(
         jx_ParBSRKrylovCommInfo,
         (JX_Int (*)(void*, void*))JXF_CPRSetup,
         (JX_Int (*)(void*, void*, void*, void*))JXF_MxP_CPRPrecond1);
-    bicgstab_solver = (JX_Solver)jx_BiCGSTABCreate(bicgstab_functions);
+    bicgstab_solver = (JX_Solver)jx_BiCGSTABCreate(fg);
     
+    // 设置BiCGSTAB参数
     JX_BiCGSTABSetMaxIter(bicgstab_solver, max_iterations);
     JX_BiCGSTABSetTol(bicgstab_solver, (JX_Real)tolerance);
     JX_BiCGSTABSetPrintLevel(bicgstab_solver, 1);
@@ -719,18 +723,12 @@ int solve_with_mixed_precision_cpr_gmres(
     }
     
     // 8. 清理
-    if (g_low_rhs) { jxf_ParVectorDestroy(g_low_rhs); g_low_rhs = NULL; }
-//    if (g_low_sol) { jxf_ParVectorDestroy(g_low_sol); g_low_sol = NULL; }
-//    if (g_work) { jx_ParVectorDestroy(g_work); g_work = NULL; }
     jx_BiCGSTABDestroy(bicgstab_solver);
-//    JXF_CPRDestroy(&cpr);
-//    jxf_ParBSRMatrixDestroy(A_low);
+    JXF_CPRDestroy(&cpr);
+    jxf_ParBSRMatrixDestroy(A_low);
     
     return 0;
 }
-
-// global work vector to avoid create/destroy heap corruption
-static jx_ParVector* g_work = NULL;
 
 // =============================================================
 // 主函数
@@ -756,7 +754,7 @@ int main(int argc, char** argv)
             printf("  binary: 0=text, 1=binary (default: 0)\n");
             printf("  rhs_file: right-hand side file (optional)\n");
         }
-        MPI_Finalize();
+        MPI_Abort(MPI_COMM_WORLD, 0);
         return 1;
     }
     
@@ -899,7 +897,7 @@ int main(int argc, char** argv)
     
     if (!A_parbsr) {
         if (myid == 0) printf("Error creating parallel BSR matrix\n");
-        MPI_Finalize();
+        MPI_Abort(MPI_COMM_WORLD, 0);
         return 1;
     }
 
@@ -941,6 +939,6 @@ int main(int argc, char** argv)
     if (par_rhs) jx_ParVectorDestroy(par_rhs);
     if (par_sol) jx_ParVectorDestroy(par_sol);
     
-    MPI_Finalize();
+    MPI_Abort(MPI_COMM_WORLD, 0);
     return result;
 }

@@ -351,9 +351,24 @@ jx_Vector* read_rhs_file(const char* filename, int expected_size) {
 //     JX_Int global_size = jx_ParVectorGlobalSize(v_double);
     
 //     // 获取分区信息
-    jx_ParVector *high_work = g_work;
-    if (!high_work) { printf("g_work not allocated
-"); return jxf_error_flag; }
+//     JXF_Int* partitioning = NULL;
+//     JX_Int* partitioning_double = jx_ParVectorPartitioning(v_double);
+//     if (partitioning_double) {
+//         // 假设分区数组有2个元素（根据注释）
+//         partitioning = (JXF_Int*)malloc(2 * sizeof(JXF_Int));
+//         if (partitioning) {
+//             partitioning[0] = (JXF_Int)partitioning_double[0];
+//             partitioning[1] = (JXF_Int)partitioning_double[1];
+//         }
+//     }
+    
+//     // 创建单精度并行向量
+//     jxf_ParVector* v_float = jxf_ParVectorCreate(comm, global_size, partitioning);
+//     if (!v_float) {
+//         if (partitioning) free(partitioning);
+//         return NULL;
+//     }
+    
 //     jxf_ParVectorInitialize(v_float);
     
 //     // 转换本地数据
@@ -822,7 +837,7 @@ int solve_with_ir_mixed_precision(
         JXF_CPRSetParameter(cpr, "pressure_index", 0);    // 压力变量索引
         JXF_CPRSetParameter(cpr, "block_size", blk_size);
         JXF_CPRSetParameter(cpr, "stage1_maxit", 1);      // 阶段1迭代次数
-        JXF_CPRSetParameter(cpr, "stage2_maxit", 2);      // 阶段2迭代次数
+        JXF_CPRSetParameter(cpr, "stage2_maxit", 1);      // 阶段2迭代次数
         JXF_CPRSetParameter(cpr, "stage1_solver_type", 1); // AMG求解器
         JXF_CPRSetParameter(cpr, "stage2_solver_type", stage2_type);
         JXF_CPRSetParameter(cpr, "print_level", 1); // 打印等级
@@ -836,7 +851,7 @@ int solve_with_ir_mixed_precision(
         
         if (setup_result != JXF_SUCCESS) {
             if (myid == 0) printf("Error setting up CPR preconditioner\n");
-            // MPI_Finalize();
+            // MPI_Abort(MPI_COMM_WORLD, 0);
             return 1;
         }
            
@@ -854,7 +869,7 @@ int solve_with_ir_mixed_precision(
         fflush(stdout); 
         
         // GMRES参数
-        int k_dim = 15;           // Krylov子空间维度
+        int k_dim = 30;           // Krylov子空间维度
         int max_iter = inner_max_iterations;      // 最大迭代次数
         float tol = inner_tolerance;          // 收敛容差
         int print_level = 1;      // 打印级别
@@ -1103,9 +1118,6 @@ int solve_cpr_gmres_single_precision(
     return 0;
 }
 
-// global work vector to avoid create/destroy heap corruption
-static jx_ParVector* g_work = NULL;
-
 // =============================================================
 // 主函数（混合精度版本）
 // =============================================================
@@ -1132,7 +1144,7 @@ int main(int argc, char** argv)
             printf("  rhs_file: right-hand side file (optional)\n");
             printf("  stage2_type: 2=BGS(单精), 4=双精BGS, 5=双精HSGS (default: 2)\n");
         }
-        MPI_Finalize();
+        MPI_Abort(MPI_COMM_WORLD, 0);
         return 1;
     }
     
@@ -1280,7 +1292,7 @@ int main(int argc, char** argv)
         
         // if (!read_success) {
         //     if (myid == 0) printf("Error during matrix reading/decoupling\n");
-        //     MPI_Finalize();
+        //     MPI_Abort(MPI_COMM_WORLD, 0);
         //     return 1;
         // }
     }
@@ -1307,7 +1319,7 @@ int main(int argc, char** argv)
     
     if (!A_parbsr) {
         if (myid == 0) printf("Error creating parallel BSR matrix\n");
-        MPI_Finalize();
+        MPI_Abort(MPI_COMM_WORLD, 0);
         return 1;
     }
     
@@ -1361,7 +1373,7 @@ int main(int argc, char** argv)
     // IR参数
     int max_ir_iterations = 100;
     Real_double ir_tolerance = 1e-4;
-    int inner_max_iterations = 3;
+    int inner_max_iterations = 5;
     Real_float inner_tolerance = 1e-2;
     
     // 调用混合精度求解
@@ -1371,6 +1383,6 @@ int main(int argc, char** argv)
         inner_max_iterations, inner_tolerance,
         stage2_type);
     
-    MPI_Finalize();
+    MPI_Abort(MPI_COMM_WORLD, 0);
     return result;
 }
