@@ -1,0 +1,188 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\newcommand{\Comment}[1]{\hfill\textcolor{blue}{// #1}}
+
+\title{Block ILU(0) Factorization with Sweeps --- \\ the {\tt jx\_ILUSetupFGPBILU\_v3} Algorithm}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Notation}
+
+\begin{itemize}
+    \item $A$: input block-sparse matrix, $A = A_{\text{diag}} + A_{\text{offd}}$
+          (splitting for distributed-memory: local rows vs.\ remote columns).
+    \item $n$: number of block rows in the local diagonal portion.
+    \item $b$: block size ($b \times b$ scalar entries per block).
+    \item $D$: block-diagonal matrix, stored per-process as a vector of $n$ blocks
+          ($n \times b^2$ scalars).  $D^{(r)}$ denotes the $b \times b$ block at
+          block row $r$.
+    \item $L$, $U$: strictly lower / strictly upper block-triangular factors
+          (no unit diagonal stored).  Each is stored in BSR format with diagonal
+          and offd parts.
+    \item $\text{nnz}_A(r)$: number of nonzero blocks in block row $r$ of $A$.
+    \item The pattern of $L$ and $U$ is the \emph{same} as the lower/upper part
+          of $A_{\text{diag}}$ (ILU(0) --- no fill-in allowed).
+\end{itemize}
+
+\section{Algorithm}
+
+\begin{algorithm}[H]
+\caption{{\tt jx\_ILUSetupFGPBILU\_v3} --- BSR Block ILU(0) Factorization}
+\label{alg:bilu}
+\begin{algorithmic}[1]
+\Require $A$ (distributed \texttt{ParBSRMatrix}), $\text{sweep} \ge 0$
+\Ensure $L$, $U$ (strict lower/upper), $D$ (inverse diagonal blocks)
+
+\Statex \textbf{Phase 1: Count \& allocate}
+
+\For{each block row $r$ in $A_{\text{diag}}$ (OMP parallel)}
+    \State Count $\text{nnz}_L(r) = \#\{\text{col} < r\}$,
+           $\text{nnz}_U(r) = \#\{\text{col} > r\}$ in $A_{\text{diag}}$
+    \State Accumulate prefix sums $\to LD_{\text{nnz}},\; UD_{\text{nnz}}$
+\EndFor
+\State Allocate $L_{\text{diag}}.\!i,j,\text{data}$, $U_{\text{diag}}.\!i,j,\text{data}$,
+        $D$ ($n \times b^2$), $d$ (working diagonal, $n \times b^2$),
+        $C_{\text{diag}}$ (Schur complement work array, $A_{\text{diag}}$ pattern)
+\Statex
+
+\Statex \textbf{Phase 2: Initial fill} ($\text{sweep}=0$)
+
+\For{each block row $r$ (OMP parallel)}
+    \For{each $(r,\text{col})$ in $A_{\text{diag}}$}
+        \If{$\text{col} < r$}
+            \State $\displaystyle L_{\text{diag}}^{(r,\text{col})}
+                \gets A_{\text{diag}}^{(r,\text{col})} \cdot D^{(\text{col})}$
+                \Comment{$D^{(\text{col})}$ already contains $\bigl(A^{(\text{col},\text{col})}\bigr)^{-1}$}
+        \ElsIf{$\text{col} > r$}
+            \State $U_{\text{diag}}^{(r,\text{col})} \gets A_{\text{diag}}^{(r,\text{col})}$
+        \Else
+            \State $d^{(r)} \gets A_{\text{diag}}^{(r,r)}$
+            \If{$\det(d^{(r)}) < \varepsilon$}
+                \State $d^{(r)} \gets I$
+            \EndIf
+            \State $D^{(r)} \gets \bigl(d^{(r)}\bigr)^{-1}$
+        \EndIf
+    \EndFor
+\EndFor
+\Statex
+
+\If{$\text{num\_procs} > 1$}
+    \State Count and fill $L_{\text{offd}}$, $U_{\text{offd}}$ analogously
+          (compare global row index vs.\ global column index)
+\EndIf
+\State Create \texttt{ParBSRMatrix} objects for $L$ and $U$,
+      \texttt{ParVector} for $D$
+\Statex
+
+\Statex \textbf{Phase 3: Sweep loop}
+
+\For{$\text{it} = 0 \;\textbf{to}\; \text{sweep}-1$}
+    \Statex
+    \Statex \textbf{Step 3a:} $C_{\text{diag}} \gets A_{\text{diag}} - L_{\text{diag}} \cdot U_{\text{diag}}$
+    \For{each block row $r$ (OMP parallel)}
+        \For{each $(r,\text{col})$ in $A_{\text{diag}}$}
+            \State $C_{\text{diag}}^{(r,\text{col})} \gets A_{\text{diag}}^{(r,\text{col})}$
+            \For{each $k$ in $L_{\text{diag}}$ row $r$}
+                \If{$U_{\text{diag}}$ has $(k,\text{col})$}
+                    \State $C_{\text{diag}}^{(r,\text{col})} \gets
+                        C_{\text{diag}}^{(r,\text{col})}
+                        - L_{\text{diag}}^{(r,k)} \cdot U_{\text{diag}}^{(k,\text{col})}$
+                \EndIf
+            \EndFor
+        \EndFor
+    \EndFor
+    \Statex
+    \Statex \textbf{Step 3b:} Re-factor $C_{\text{diag}}$ into new $L_{\text{diag}}, D, U_{\text{diag}}$
+    \For{each block row $r$ (OMP parallel)}
+        \For{each $(r,\text{col})$ in $A_{\text{diag}}$}
+            \If{$\text{col} < r$}
+                \State $\displaystyle L_{\text{diag}}^{(r,\text{col})}
+                    \gets C_{\text{diag}}^{(r,\text{col})} \cdot D^{(\text{col})}$
+            \ElsIf{$\text{col} > r$}
+                \State $U_{\text{diag}}^{(r,\text{col})} \gets C_{\text{diag}}^{(r,\text{col})}$
+            \Else
+                \State $d^{(r)} \gets C_{\text{diag}}^{(r,r)}$
+                \If{$\det(d^{(r)}) < \varepsilon$}
+                    \State $d^{(r)} \gets I$
+                \EndIf
+                \State $D^{(r)} \gets \bigl(d^{(r)}\bigr)^{-1}$
+            \EndIf
+        \EndFor
+    \EndFor
+    \Statex
+    \If{$\text{num\_procs} > 1$}
+        \Statex \textbf{Step 3c (offd):} Reset $L_{\text{offd}}, U_{\text{offd}}$ from $A_{\text{offd}}$
+        \Comment{Offd part has no $L\cdot U$ path product in ILU(0) --- pattern only allows diag entries}
+        \For{each block row $r$ (OMP parallel)}
+            \State Copy $A_{\text{offd}}^{(r,\cdot)} \to C_{\text{offd}}^{(r,\cdot)}$
+            \For{each $(r,\text{col})$ in $A_{\text{offd}}$}
+                \If{$\text{gcol} > \text{grow}$}
+                    \State $U_{\text{offd}}^{(r,\text{col})} \gets C_{\text{offd}}^{(r,\text{col})}$
+                \Else
+                    \State $L_{\text{offd}}^{(r,\text{col})} \gets C_{\text{offd}}^{(r,\text{col})}$
+                \EndIf
+            \EndFor
+        \EndFor
+    \EndIf
+\EndFor
+
+\State Output $L$, $U$, $D$
+\end{algorithmic}
+\end{algorithm}
+
+\section{Remarks}
+
+\begin{enumerate}
+    \item \textbf{Initial fill as sweep 0:}
+          At $\text{sweep}=0$ the loop body in Phase~3 is skipped entirely.
+          The $L$, $U$, $D$ produced by Phase~2 equal the standard ILU(0) factors:
+          \[
+          D^{(r)} = \bigl(A^{(r,r)}\bigr)^{-1},\qquad
+          L^{(r,c)} = A^{(r,c)} \cdot D^{(c)},\qquad
+          U^{(r,c)} = A^{(r,c)} .
+          \]
+
+    \item \textbf{Sweep interpretation:}
+          Each sweep recomputes the Schur complement
+          $C = A - L \cdot U$ on the pattern of $A$, then re-factors it.
+          This does \emph{not} change the sparsity pattern (ILU(0) is fixed).
+          The path product $L_{\text{diag}}^{(r,k)} \cdot U_{\text{diag}}^{(k,c)}$
+          produces fill-in blocks that get \emph{discarded} (they only contribute
+          through the pattern of $A$).
+
+    \item \textbf{$D$ is stored as inverse:}
+          The array $D$ contains block-wise inverses.
+          The working copy $d$ retains the actual diagonal for the sweep update.
+          $L$ already includes the $D$ scaling:
+          $L^{(r,c)} = C^{(r,c)} \cdot D^{(c)}$ (lower) or
+          $L^{(r,c)} = C^{(r,c)}$ (offd global-lower).
+
+    \item \textbf{Distributed-memory offd part:}
+          For $\text{num\_procs} > 1$, $A_{\text{offd}}$ stores blocks whose
+          column index belongs to another process.  $L_{\text{offd}}$ and
+          $U_{\text{offd}}$ are split by comparing the \emph{global} row index
+          $r + \text{first\_col\_diag}$ with the global column index from
+          $\text{col\_map\_offd}$.  During sweeps, the offd part is simply
+          reset from $A_{\text{offd}}$ --- no path product is subtracted because
+          the ILU(0) pattern does not account for offd--offd paths.
+
+    \item \textbf{OpenMP parallelism:}
+          Block rows are partitioned among threads using a static
+          $\lceil n / \text{nt}\rceil$ chunk size.  Prefix arrays
+          (\texttt{workL}, \texttt{workU}) per thread avoid atomic contention
+          during counting and filling.
+
+    \item \textbf{Singular diagonal guard:}
+          If $\det(d^{(r)}) < \mathtt{MAT\_TOL}$ (default $\approx 10^{-12}$),
+          the diagonal block is replaced by identity to prevent breakdown.
+\end{enumerate}
+
+\end{document}

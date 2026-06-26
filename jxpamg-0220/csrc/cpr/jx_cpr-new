@@ -1,0 +1,708 @@
+//========================================================================//
+//  JXPAMG(IAPCM & XTU Parallel Algebraic Multigrid) (c) 2009-2024        //
+//  Institute of Applied Physics and Computational Mathematics            //
+//  School of Mathematics and Computational Science Xiangtan University   //
+//========================================================================//
+
+/*!
+ *  jx_cpr.c --  JXPAMG CPR预条件器实现文件 
+ *  Date: 2025/10/08
+ */ 
+
+#include "jx_cpr.h"
+#include "jx_pamg.h"     // AMG求解器 (用于Stage1压力子系统)
+#include "jx_parbilu.h"   // BILU求解器 (用于Stage2磨光方法, stage2_solver_type=3)
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+
+/*---------------------------------------------------------------*
+ *             内部辅助函数                                       *
+ *----------------------------------------------------------------*/
+
+/**
+ * \brief 获取BSR矩阵的块大小
+ */
+static inline JX_Int jx_GetBSRBlockSize(jx_ParBSRMatrix *A_bsr)
+{
+    if (A_bsr == NULL || A_bsr->diag == NULL) return 1;
+    return jx_BSRMatrixBlockSize(A_bsr->diag);
+}
+
+/**
+ * \brief 创建与压力矩阵维度匹配的向量   
+ */
+static jx_ParVector* jx_CreatePressureVector(jx_ParCSRMatrix *A_pressure)
+{
+    if (A_pressure == NULL) return NULL;
+    
+    MPI_Comm      comm     = jx_ParCSRMatrixComm(A_pressure);
+    JX_BigInt     global_size = jx_ParCSRMatrixGlobalNumRows(A_pressure);
+    JX_BigInt*    partition = jx_ParCSRMatrixRowStarts(A_pressure);
+    jx_ParVector* x_par    = jx_ParVectorCreate(comm, global_size, partition);
+    jx_ParVectorInitialize(x_par);
+    
+    return x_par;
+}
+
+/**
+ * \brief 创建与BSR矩阵维度匹配的全局向量
+ */
+static jx_ParVector* jx_CreateGlobalVector(jx_ParBSRMatrix *A_bsr)
+{
+    if (A_bsr == NULL) return NULL;
+    
+    MPI_Comm      comm     = A_bsr->comm;
+    // 获取BSR矩阵的块信息
+    jx_BSRMatrix* A_diag = jx_ParBSRMatrixDiag(A_bsr);
+    if (!A_diag) return NULL;
+    
+    JX_Int block_size = jx_BSRMatrixBlockSize(A_diag);
+    JX_BigInt     global_size = jx_ParBSRMatrixGlobalNumRows(A_bsr);
+    // 计算标量维度 = 块行数 × 块大小
+    JX_BigInt global_scalar_rows = global_size * block_size;
+    JX_BigInt*    partition ;
+    jx_ParBSRMatrixGetRowPartitioning(A_bsr, &partition);
+    jx_ParVector* x_par    = jx_ParVectorCreate(comm, global_scalar_rows, partition);
+    jx_ParVectorInitialize(x_par);
+    
+    return x_par;
+}
+
+/**
+ * \brief 限制算子：从全局向量提取压力分量
+ */
+static JX_Int jx_RestrictPressureVector(jx_ParVector *global_vec,
+                                       jx_ParVector *pressure_vec,
+                                       JX_Int block_size,
+                                       JX_Int pressure_index)
+{
+    if (global_vec == NULL || pressure_vec == NULL) return jx_error_flag;
+
+    jx_Vector* x_local = jx_ParVectorLocalVector(global_vec);
+    jx_Vector* y_local = jx_ParVectorLocalVector(pressure_vec);
+    JX_Real*   x_data  = jx_VectorData(x_local);
+    JX_Real*   y_data  = jx_VectorData(y_local);
+    JX_Int     x_row   = jx_VectorSize(x_local);
+    JX_Int     y_row   = jx_VectorSize(y_local);
+    JX_Int     i;
+
+    if (y_row * block_size != x_row) {
+        ERROR_PRINTF("%s, y_row %d, nb %d, y_row * nb: %d !=  x_row: %d\n", 
+                     __FUNCTION__, y_row, block_size, y_row * block_size, x_row);
+        return jx_error_flag;
+    }
+
+    for (i = 0; i < y_row; i++) {
+        y_data[i] = x_data[i * block_size + pressure_index];
+    }
+
+    return JX_SUCCESS;
+}
+
+/**
+ * \brief 延拓算子：将压力分量延拓到全局向量
+ */
+static JX_Int jx_ProlongatePressureVector(jx_ParVector *pressure_vec,
+                                         jx_ParVector *global_vec,
+                                         JX_Int block_size,
+                                         JX_Int pressure_index,
+                                         JX_Int type)
+{
+    if (pressure_vec == NULL || global_vec == NULL) return jx_error_flag;
+    
+    jx_Vector* x_local = jx_ParVectorLocalVector(pressure_vec);
+    jx_Vector* y_local = jx_ParVectorLocalVector(global_vec);
+    JX_Real*   x_data  = jx_VectorData(x_local);
+    JX_Real*   y_data  = jx_VectorData(y_local);
+    JX_Int     x_row   = jx_VectorSize(x_local);
+    JX_Int     y_row   = jx_VectorSize(y_local);
+    JX_Int     i, j;
+
+    if (y_row != x_row * block_size) {
+        ERROR_PRINTF("%s, x_row %d, y_row %d, nb %d, y_row: %d !=  x_row * nb: %d\n", 
+                     __FUNCTION__, x_row, y_row, block_size, y_row, x_row * block_size);
+        return jx_error_flag;
+    }
+
+    if (type == 0) {
+        // 仅延拓：将压力分量放入全局向量，其他分量清零
+        for (i = 0; i < x_row; i++) {
+            for (j = 0; j < block_size; j++) {
+                y_data[i * block_size + j] = (j == pressure_index) ? x_data[i] : 0.0;
+            }
+        }
+    } else if (type == 1) {
+        // 延拓+修正：将压力分量加到全局向量的对应位置
+        for (i = 0; i < x_row; i++) {
+            y_data[i * block_size + pressure_index] += x_data[i];
+        }
+    } else {
+        WARN_PRINTF("%s, type %d don't implenmented!\n", __FUNCTION__, type);
+        return jx_error_flag;
+    }
+
+    return JX_SUCCESS;
+}
+
+/*----------------------------------------------------------------*
+ *             CPR预条件器创建和销毁                              *
+ *----------------------------------------------------------------*/
+
+jx_CPRPrecond* JX_CPRCreate(MPI_Comm comm)
+{
+    // printf(" [%s:%d] enter JX_CPRCreate\n",__FUNCTION__, __LINE__);
+    // fflush(stdout);
+
+    jx_CPRPrecond *cpr = (jx_CPRPrecond*)malloc(sizeof(jx_CPRPrecond));
+    if (cpr == NULL) return NULL;
+    
+    // printf(" [%s:%d] JX_CPRCreate\n",__FUNCTION__, __LINE__);
+    // fflush(stdout);
+
+    memset(cpr, 0, sizeof(jx_CPRPrecond));
+    cpr->comm = comm;
+
+    // printf(" [%s:%d] JX_CPRCreate\n",__FUNCTION__, __LINE__);
+    // fflush(stdout);    
+
+    // 设置默认参数
+    cpr->pressure_index = 0;
+    cpr->block_size = 1;
+    cpr->threshold = 1e-15;
+    cpr->stage1_maxit = 1;
+    cpr->stage2_maxit = 1;
+    cpr->stage1_solver_type = 1;  // AMG求解器
+    cpr->stage2_solver_type = 2;  // BGS求解器
+    cpr->is_initialized = 0;
+    
+    // printf(" [%s:%d] JX_CPRCreate\n",__FUNCTION__, __LINE__);
+    // fflush(stdout);
+
+    return cpr;
+}
+
+JX_Int JX_CPRDestroy(jx_CPRPrecond **cpr_ptr)
+{
+    if (cpr_ptr == NULL || *cpr_ptr == NULL) return jx_error_flag;
+    
+    jx_CPRPrecond *cpr = *cpr_ptr;
+    
+    // 销毁压力矩阵
+    if (cpr->A_pressure != NULL) {
+        jx_ParCSRMatrixDestroy(&cpr->A_pressure);
+    }
+    
+    // 销毁阶段1求解器
+    if (cpr->stage1_solver != NULL) {
+        JX_PAMGDestroy(cpr->stage1_solver);
+    }
+    
+     // 销毁阶段2求解器
+     if (cpr->stage2_solver != NULL) {
+         if (cpr->stage2_solver_type == 3) {
+             // ============================================================
+             // BILU-GMRES 求解器销毁 (新增)
+             // ============================================================
+             // 注意: stage2_solver 是 JX_Solver* 类型 (指向指针的指针)
+             // 需要先用 *stage2_solver 获取实际的 JX_Solver
+             // 然后调用 JX_BILUDestroy 释放 BILU 内部数据
+             // ============================================================
+             // 重要提示:
+             // 如果 matA 是外部管理的 (如 cpr->A_bsr)，需要在调用
+             // JX_BILUDestroy 前将其设为 NULL，避免双重释放
+             // ============================================================
+             JX_BILUDestroy(*(cpr->stage2_solver));
+         }
+         // 释放存储 JX_Solver 指针的内存
+         free(cpr->stage2_solver);
+     }
+    
+    // 销毁工作向量
+    if (cpr->rp != NULL) {
+        jx_ParVectorDestroy(cpr->rp);
+    }
+    
+    if (cpr->xp != NULL) {
+        jx_ParVectorDestroy(cpr->xp);
+    }
+    
+    // if (cpr->work != NULL) {
+    //     jx_ParVectorDestroy(cpr->work);
+    // }
+    
+    free(cpr);
+    *cpr_ptr = NULL;
+    
+    return JX_SUCCESS;
+}
+
+JX_Int JX_CPRSetParameter(jx_CPRPrecond *cpr, const char *param_name, JX_Int value)
+{
+    if (cpr == NULL) return jx_error_flag;
+    
+    if (strcmp(param_name, "pressure_index") == 0) {
+        cpr->pressure_index = value;
+    } else if (strcmp(param_name, "stage1_maxit") == 0) {
+        cpr->stage1_maxit = value;
+    } else if (strcmp(param_name, "stage2_maxit") == 0) {
+        cpr->stage2_maxit = value;
+    } else if (strcmp(param_name, "stage1_solver_type") == 0) {
+        cpr->stage1_solver_type = value;
+    } else if (strcmp(param_name, "stage2_solver_type") == 0) {
+        cpr->stage2_solver_type = value;
+    } else if (strcmp(param_name, "print_level") == 0) {
+        cpr->print_level = value;
+    } else if (strcmp(param_name, "block_size") == 0) {
+        cpr->block_size = value;
+    } else {
+        return jx_error_flag;
+    }
+    
+    return JX_SUCCESS;
+}
+
+JX_Int JX_CPRSetRealParameter(jx_CPRPrecond *cpr, const char *param_name, JX_Real value)
+{
+    if (cpr == NULL) return jx_error_flag;
+    
+    if (strcmp(param_name, "threshold") == 0) {
+        cpr->threshold = value;
+    } else {
+        return jx_error_flag;
+    }
+    
+    return JX_SUCCESS;
+}
+
+/*----------------------------------------------------------------*
+ *             CPR设置和求解函数实现                              *
+ *----------------------------------------------------------------*/
+
+JX_Int JX_CPRSetup(jx_CPRPrecond *cpr, jx_ParBSRMatrix* parbsr_matrix)
+{
+
+
+    if (cpr == NULL || parbsr_matrix == NULL) return jx_error_flag;
+    
+    cpr->A_bsr = parbsr_matrix;
+    cpr->block_size = jx_GetBSRBlockSize(cpr->A_bsr);
+    
+    JX_Real t1, t2;
+    
+    // ------------------------------------------------------------
+    // 阶段1：压力子系统设置
+    // ------------------------------------------------------------
+    t1 = jx_MPI_Wtime();
+    
+    // // 0. 先并行解耦
+
+    // // 使用ABF解耦（推荐）
+    // JX_DecoupType decoup_type = JX_DECOUP_ABF;
+    // JX_Int is_thermal = 0;  // 假设是非热力模型，根据实际情况调整
+    
+    // JX_Int decoup_result = jx_ParBSRMatrixDecouple(cpr->A_bsr, decoup_type, is_thermal);
+    // if (decoup_result != JX_SUCCESS) {
+    //     if (myid == 0) printf("Error applying decoupling\n");
+    //     return jx_error_flag;
+    // }
+    
+    // if (myid == 0) {
+    //     printf("Decoupling completed (method: %s)\n", 
+    //         jx_DecoupTypeToString(decoup_type));
+    // }
+
+
+    // 1. 提取压力矩阵
+    cpr->A_pressure = jx_ParBSRMatrixGetSubmatrix(cpr->A_bsr,
+                                                  cpr->pressure_index,
+                                                  cpr->threshold);
+    // printf(" [%s:%d] matrix_C = %p \n",__FUNCTION__, __LINE__, (void*)cpr->A_pressure);
+    // fflush(stdout);  
+    // printf(" [%s:%d] jx_ParCSRMatrixComm(matrix_C) = %p \n",__FUNCTION__, __LINE__, (void*)jx_ParCSRMatrixComm(cpr->A_pressure));
+    // fflush(stdout);     
+    // printf(" [%s:%d] jx_CSRMatrixI(diag) = %p \n",__FUNCTION__, __LINE__, (void*)jx_CSRMatrixI(jx_ParCSRMatrixDiag(cpr->A_pressure)));
+    // fflush(stdout);     
+
+    if (cpr->A_pressure == NULL) return jx_error_flag;
+    
+    // 2. 创建压力求解器（AMG）
+    //-----------------------
+    //  参数设置
+    //-----------------------
+    JX_Int max_levels       = 25;       /* 最大网格层数 */
+    JX_Int max_its          = 1;       /* 最大iter */
+    JX_Int cycle_type       = 1;        /* Cycle 类型  1: V_Cycle; 2：W_Cycle */
+    JX_Int relax_type       = 3;        /* Relax 类型  3: hGS; 6：hSGS */
+    JX_Int coarse_solver    = 9;        /* coarse_solver 粗空间解法器类型  9: GE; 10: Pardiso */
+    JX_Int measure_type     = 0;        /* 影响值的计算方式 0：局部；1：全局 */
+    JX_Int rap2             = 0;        /* RAP计算方式  0：RAP；1：先算Q=AP，再算RQ */
+    JX_Int ns_down          = 1;
+    JX_Int ns_up            = 1;
+    JX_Int ns_coarse        = 1;
+    JX_Int restri_type      = 0;        /* 限制算子类型 0: P^T, 1: AIR, 2: AIR-2 */
+    JX_Int keepTranspose    = 0;        /* 存放限制算子  0：no；1：yes */
+    JX_Int CF               = -1;
+     JX_Int coarsen_type     = 10;        /* 粗化策略 */
+    JX_Int interp_type      = 6;        /* 插值策略 */
+    JX_Int trunc_factor     = 0;        /* 插值矩阵截断因子 */
+    JX_Int P_max_elmts      = 5;        /* 插值算子每行最大非零元个数 */
+    JX_Int agg_num_levels   = 0;        /* Aggressive粗化的层数 */
+    JX_Int ai_measure_type  = 0;        /* AI-策略  0: no; 1: yes */
+    JX_Int ai_relax_type    = 0;        /* AI-磨光  0: no; 1: yes */
+    JX_Int amg_print_level  = cpr->print_level;  /* 跟随CPR的打印级别 */
+    JX_Real strong_threshold = 0.25;     /* 强弱连通参数, 0.25 for 2D, 0.5 for 3D is recommended */
+    JX_Real max_row_sum      = 0.9;      /* 行和参数 */
+    JX_Real relax_wt         = 1.0;
+    JX_Real outer_wt         = 1.0;
+    JX_Real S_commpkg_switch = 1.0;
+    JX_Real AIR_strong_th    = 0.25;
+    JX_Int coarse_threshold  = 1000;      /* 最粗网格层上网格节点个数的最大值 */
+    JX_Real coarse_ratio     = 0.75;     /* 相邻两个网格层的粗点个数超过细点个数的 coarse_ratio, 则换成 CLJP 粗化 */
+    JX_Int conv_criteria     = 0;        /* 收敛准则类型 */
+    JX_Solver   amg_solver;
+
+    JX_PAMGCreate(&amg_solver);
+    JX_PAMGSetMaxLevels(amg_solver, max_levels);
+    JX_PAMGSetMaxIter(amg_solver, max_its);
+    JX_PAMGSetCycleType(amg_solver, cycle_type);
+    JX_PAMGSetMeasureType(amg_solver, measure_type);
+    JX_PAMGSetRAP2(amg_solver, rap2);
+    JX_PAMGSetKeepTranspose(amg_solver, keepTranspose);
+    JX_PAMGSetCoarsenType(amg_solver, coarsen_type);
+    JX_PAMGSetInterpType(amg_solver, interp_type);
+    JX_PAMGSetPMaxElmts(amg_solver, P_max_elmts);
+    JX_PAMGSetAggNumLevels(amg_solver, agg_num_levels);
+    JX_PAMGSetAIMeasureType(amg_solver, ai_measure_type);
+    JX_PAMGSetAIRelaxType(amg_solver, ai_relax_type);
+    JX_PAMGSetStrongThreshold(amg_solver, strong_threshold);
+    JX_PAMGSetMaxRowSum(amg_solver, max_row_sum);
+    JX_PAMGSetPrintLevel(amg_solver, amg_print_level);
+    JX_PAMGSetCoarseThreshold(amg_solver, coarse_threshold);
+    JX_PAMGSetRelaxWt(amg_solver, relax_wt);
+    JX_PAMGSetOuterWt(amg_solver, outer_wt);
+    JX_PAMGSetSCommPkgSwitch(amg_solver, S_commpkg_switch);
+    JX_PAMGSetAIRStrongTh(amg_solver, AIR_strong_th);
+    if (ns_down > -1) JX_PAMGSetCycleNumSweeps(amg_solver, ns_down, 1);           /* sweep for "down" */
+    if (ns_up > -1) JX_PAMGSetCycleNumSweeps(amg_solver, ns_up, 2);           /* sweep for "up" */
+    JX_PAMGSetCycleNumSweeps(amg_solver, ns_coarse, 3);           /* sweep for "coarsest" */
+    JX_PAMGSetCycleRelaxType(amg_solver, relax_type, 1);  /* relax_type for "down" */
+    JX_PAMGSetCycleRelaxType(amg_solver, relax_type, 2);  /* relax_type for "up" */
+    JX_PAMGSetCycleRelaxType(amg_solver, coarse_solver, 3);           /* relax_type for "coarsest" */
+    
+    JX_PAMGSetup(amg_solver, (JX_ParCSRMatrix)cpr->A_pressure);
+    
+
+    
+    cpr->stage1_solver = amg_solver;
+    // if (cpr->stage1_solver == NULL) return jx_error_flag;
+    
+    // 设置AMG求解器
+    // JX_PAMGSetup(cpr->stage1_solver, (JX_ParCSRMatrix)cpr->A_pressure);
+    
+    // 3. 创建工作向量
+    cpr->rp = jx_CreatePressureVector(cpr->A_pressure);
+    cpr->xp = jx_CreatePressureVector(cpr->A_pressure);
+
+
+
+    // // 创建全局工作向量
+    cpr->work = jx_CreateGlobalVector(cpr->A_bsr);
+    if (cpr->work == NULL) return jx_error_flag;
+
+
+
+    t2 = jx_MPI_Wtime();
+    cpr->stage1_setup_time = t2 - t1;
+    
+    // ------------------------------------------------------------
+    // 阶段2：全局求解器设置
+    // ------------------------------------------------------------
+    t1 = jx_MPI_Wtime();
+    
+    // 根据类型创建第二阶段求解器
+    if (cpr->stage2_solver_type == 2) {  // BGS (Block Gauss-Seidel) 磨光
+        cpr->stage2_solver = NULL;
+    } else if (cpr->stage2_solver_type == 3) {  // BILU-GMRES 磨光 (新增)
+        // 分配空间存储BILU求解器指针
+        JX_Solver *bilu_solver_ptr = (JX_Solver*)malloc(sizeof(JX_Solver));
+        
+        // 创建临时向量用于BILU setup 
+        // 注意: jx_BILUSetup 内部需要访问向量大小信息，不能传 NULL
+        jx_ParVector *tmp_b = jx_CreateGlobalVector(cpr->A_bsr);
+        jx_ParVector *tmp_x = jx_CreateGlobalVector(cpr->A_bsr);
+        
+        // 创建 BILU 求解器并设置参数
+        // 参数参考: jxpamg_interface.c case 27 和 solver-bilu.c
+        JX_BILUCreate(bilu_solver_ptr);
+        JX_ILUSetType(*bilu_solver_ptr, 3);           // ILU类型: 3=BILU
+        JX_ILUSetLevelOfFill(*bilu_solver_ptr, 0);    // 填充水平: 0=ILU(0)
+        JX_ILUSetMaxIter(*bilu_solver_ptr, cpr->stage2_maxit);  // 内部迭代次数
+        JX_ILUSetTol(*bilu_solver_ptr, 0.0);          // 收敛容差: 0=禁用收敛检查(仅单次预条件应用)
+        JX_ILUSetTriSolve(*bilu_solver_ptr, 14);      // 三角求解策略
+        JX_ILUSetLogging(*bilu_solver_ptr, 0);         // 日志记录: 0=禁用(减少开销)
+        JX_ILUSetPrintLevel(*bilu_solver_ptr, cpr->print_level);  // 打印级别
+        JX_ILUSetsweep(*bilu_solver_ptr, 3);           // ILU磨光扫掠次数
+        
+        // 执行 BILU 分解 (Setup 阶段)
+        // 注意: 需要先设置 matA，否则分解会失败
+        ((jx_ParBILUData*)*bilu_solver_ptr)->matA = cpr->A_bsr;
+        jx_BILUSetup((void*)*bilu_solver_ptr, cpr->A_bsr, tmp_b, tmp_x);
+        
+        // 销毁临时向量 (setup完成后不再需要)
+        jx_ParVectorDestroy(tmp_b);
+        jx_ParVectorDestroy(tmp_x);
+        
+        // 保存 BILU 求解器指针到 CPR 结构
+        cpr->stage2_solver = bilu_solver_ptr;
+    }
+    
+    t2 = jx_MPI_Wtime();
+    cpr->stage2_setup_time = t2 - t1;
+    
+    cpr->is_initialized = 1;
+    
+    return JX_SUCCESS;
+}
+
+JX_Int JX_CPRPrecond(jx_CPRPrecond *cpr, jx_ParBSRMatrix* par_matrix,
+                     jx_ParVector *par_rhs, jx_ParVector *par_sol)
+{
+    MPI_Comm      comm     = par_matrix->comm;
+    if (cpr == NULL || !cpr->is_initialized) return jx_error_flag;
+    if (par_rhs == NULL || par_sol == NULL) return jx_error_flag;
+    
+    JX_Real t1, t2;
+    JX_Int i;
+    
+    JX_Int block_size = cpr->block_size;
+    JX_Int pressure_index = cpr->pressure_index;
+
+    // 初始化解向量为零
+    jx_ParVectorSetConstantValues(par_sol, 0.0);
+
+    // ------------------------------------------------------------
+    // 阶段1：求解压力子系统
+    // ------------------------------------------------------------
+    
+    // 1.1 限制：从全局残差提取压力残差
+    jx_RestrictPressureVector(par_rhs, cpr->rp, block_size, pressure_index);
+
+    // 1.2 求解压力系统：xp = A_p^{-1} * rp
+    jx_ParVectorSetConstantValues(cpr->xp, 0.0);
+
+        // JX_Int          *partitioning;
+
+    // 计算并打印残差范数（调试用）
+    if (cpr->print_level > 1) {
+        // jx_ParCSRMatrixGetRowPartitioning(cpr->A_pressure, &partitioning);
+        // // 创建临时残差向量
+        // jx_ParVector *res_before = jx_ParVectorCreate(comm,jx_ParVectorGlobalSize(cpr->rp),partitioning);
+        jx_ParVector *res_before = jx_CreatePressureVector(cpr->A_pressure);
+        // 计算残差: r = b - A*x
+        jx_ParVectorCopy(cpr->rp, res_before);
+        jx_ParCSRMatrixMatvec(-1.0, cpr->A_pressure, cpr->xp, 1.0, res_before);
+
+        JX_Real xp_norm = jx_ParVectorNorm2(cpr->xp);
+        JX_Real rp_norm = jx_ParVectorNorm2(cpr->rp);
+        JX_Real res_before_norm = jx_ParVectorNorm2(res_before);
+
+        printf("CPR: xp_norm = %.6e, rp_norm = %.6e,  res_before_norm = %.6e\n", xp_norm, rp_norm, res_before_norm);
+        fflush(stdout);
+    }
+    t1 = jx_MPI_Wtime();
+    for (i = 0; i < cpr->stage1_maxit; i++) {
+        // 使用AMG求解压力系统
+        JX_PAMGSolve(cpr->stage1_solver, 
+                     (JX_ParCSRMatrix)cpr->A_pressure,
+                     (JX_Vector)cpr->rp,
+                     (JX_Vector)cpr->xp);
+    }
+
+    t2 = jx_MPI_Wtime();
+    cpr->stage1_solve_time += t2 - t1;
+
+    // 计算并打印残差范数（调试用）
+    if (cpr->print_level > 1) {
+        // // 创建临时残差向量
+        // jx_ParVector *res_after = jx_ParVectorCreate(comm,jx_ParVectorGlobalSize(cpr->rp),partitioning);
+        jx_ParVector *res_after = jx_CreatePressureVector(cpr->A_pressure);
+        // 计算残差: r = b - A*x
+        jx_ParVectorCopy(cpr->rp, res_after);
+        jx_ParCSRMatrixMatvec(-1.0, cpr->A_pressure, cpr->xp, 1.0, res_after);
+
+        JX_Real xp_after_norm = jx_ParVectorNorm2(cpr->xp);
+        JX_Real rp_after_norm = jx_ParVectorNorm2(cpr->rp);
+        JX_Real res_after_norm = jx_ParVectorNorm2(res_after);
+
+        printf("CPR: xp_after_norm = %.6e, rp_after_norm = %.6e,  res_after_norm = %.6e\n", xp_after_norm, rp_after_norm, res_after_norm);
+        fflush(stdout);
+    
+    }
+
+
+        // 计算并打印残差范数（调试用）
+    if (cpr->print_level > 1) {
+        // // 创建临时残差向量
+        jx_ParVector *global_res_before = jx_CreateGlobalVector(cpr->A_bsr);
+        // 计算残差: r = b - A*x
+        jx_ParVectorCopy(par_rhs, global_res_before);
+        jx_ParBSRMatrixMatvec(-1.0, cpr->A_bsr, par_sol, 1.0, global_res_before);
+
+        JX_Real global_xp_before_norm = jx_ParVectorNorm2(par_sol);
+        JX_Real global_rp_before_norm = jx_ParVectorNorm2(par_rhs);
+        JX_Real global_res_before_norm = jx_ParVectorNorm2(global_res_before);
+
+        printf("CPR: global_xp_before_norm = %.6e, global_rp_before_norm = %.6e,  global_res_before_norm = %.6e\n", global_xp_before_norm, global_rp_before_norm, global_res_before_norm);
+        fflush(stdout);
+    }
+    // 1.3 延拓：将压力解延拓到全局向量
+    jx_ProlongatePressureVector(cpr->xp, par_sol, block_size, pressure_index, 0);
+
+        // 计算并打印残差范数（调试用）
+    if (cpr->print_level > 1) {
+        // // 创建临时残差向量
+        jx_ParVector *global_res_after = jx_CreateGlobalVector(cpr->A_bsr);
+        // 计算残差: r = b - A*x
+        jx_ParVectorCopy(par_rhs, global_res_after);
+        jx_ParBSRMatrixMatvec(-1.0, cpr->A_bsr, par_sol, 1.0, global_res_after);
+
+        JX_Real global_xp_after_norm = jx_ParVectorNorm2(par_sol);
+        JX_Real global_rp_after_norm = jx_ParVectorNorm2(par_rhs);
+        JX_Real global_res_after_norm = jx_ParVectorNorm2(global_res_after);
+
+        printf("CPR: global_xp_after_norm = %.6e, global_rp_after_norm = %.6e,  global_res_after_norm = %.6e\n", global_xp_after_norm, global_rp_after_norm, global_res_after_norm);
+        fflush(stdout);
+    }
+    // ------------------------------------------------------------
+    // 阶段2：全局修正
+    // ------------------------------------------------------------
+    t1 = jx_MPI_Wtime();
+    
+    // 设置松弛参数（这些可以配置在cpr->config中）
+    JX_Real relax_weight = 1.0;    // 松弛权重
+    JX_Real omega = 0.8;          // 阻尼因子
+    JX_Int forward_or_backward = 1; // 1: 前向, 0: 对称, -1: 后向
+
+    // 创建临时残差向量
+    jx_ParVector *residual_before = jx_CreateGlobalVector(cpr->A_bsr);
+    jx_ParVector *residual_after = jx_CreateGlobalVector(cpr->A_bsr);
+
+     for (i = 0; i < cpr->stage2_maxit; i++) {
+          // 计算残差: r = b - A*x
+          jx_ParVectorCopy(par_rhs, residual_before);
+          jx_ParVectorCopy(par_rhs, residual_after);
+
+          jx_ParBSRMatrixMatvec(-1.0, cpr->A_bsr, par_sol, 1.0, residual_before);
+
+          // 根据stage2_solver_type调用不同的求解器
+          if (cpr->stage2_solver_type == 2) {
+              // BGS (Block Gauss-Seidel) 磨光
+              // 注意: 第三个参数应为原始RHS (par_rhs), 不是残差(residual_before)
+              jx_ParBSRHGSRelax(cpr->A_bsr, par_sol, par_rhs, cpr->work, relax_weight, omega, forward_or_backward);
+
+              if (cpr->print_level > 1) {
+                  jx_ParBSRMatrixMatvec(-1.0, cpr->A_bsr, par_sol, 1.0, residual_after);
+                  JX_Real residual_before_norm = jx_ParVectorNorm2(residual_before);
+                  JX_Real par_sol_before_norm = jx_ParVectorNorm2(par_sol);
+                  JX_Real residual_after_norm = jx_ParVectorNorm2(residual_after);
+                  JX_Real par_sol_after_norm = jx_ParVectorNorm2(par_sol);
+
+                  printf("CPR: residual_before_norm = %.6e, par_sol_before_norm = %.6e \n", residual_before_norm, par_sol_before_norm);
+                  printf("CPR: residual_after_norm = %.6e, par_sol_after_norm = %.6e \n", residual_after_norm, par_sol_after_norm);
+                  fflush(stdout);
+              }
+           } else if (cpr->stage2_solver_type == 3) {
+               // ============================================================
+               // Stage2: BILU-GMRES 磨光方法 (新增实现)
+               // ============================================================
+               // 磨光公式: x = x + M^{-1} * r
+               // 其中:
+               //   - r 是当前残差 (residual_before)
+               //   - M 是 BILU 预条件器
+               //   - 求解 M * delta = r 得到修正量 delta
+               //   - 更新 x = x + delta
+               // ============================================================
+               if (cpr->stage2_solver != NULL) {
+                   // 从 cpr 结构中获取 BILU 求解器
+                   JX_Solver bilu_solver = *(cpr->stage2_solver);
+                   
+                   // 工作向量初始化为0 (作为求解的初始猜测)
+                   jx_ParVectorSetConstantValues(cpr->work, 0.0);
+                   
+                   // 调用 BILU 求解: work = M^{-1} * residual_before
+                   // 参数说明:
+                   //   - (void*)bilu_solver: BILU 求解器数据结构
+                   //   - cpr->A_bsr: 并行 BSR 矩阵 (用于获取通信模式)
+                   //   - residual_before: 右端项 (残差 r)
+                   //   - cpr->work: 解向量 (输出 delta)
+                   jx_BILUSolve((void*)bilu_solver, cpr->A_bsr, residual_before, cpr->work);
+                   
+                   // 更新解: par_sol = par_sol + work
+                   // 即: x_new = x_old + delta
+                   jx_ParVectorAxpy(1.0, cpr->work, par_sol);
+                   
+                   // 调试输出: 打印磨光前后的残差范数
+                   if (cpr->print_level > 1) {
+                       jx_ParBSRMatrixMatvec(-1.0, cpr->A_bsr, par_sol, 1.0, residual_after);
+                       JX_Real residual_before_norm = jx_ParVectorNorm2(residual_before);
+                       JX_Real par_sol_before_norm = jx_ParVectorNorm2(par_sol);
+                       JX_Real residual_after_norm = jx_ParVectorNorm2(residual_after);
+                       JX_Real par_sol_after_norm = jx_ParVectorNorm2(par_sol);
+
+                       printf("CPR: residual_before_norm = %.6e, par_sol_before_norm = %.6e \n", residual_before_norm, par_sol_before_norm);
+                        printf("CPR-BILU: residual_after_norm = %.6e, par_sol_after_norm = %.6e \n", residual_after_norm, par_sol_after_norm);
+                        fflush(stdout);
+                    }
+                }
+           } else {
+               // 默认处理：直接使用残差作为修正
+               jx_ParVectorAxpy(1.0, residual_before, par_sol);
+           }
+       }
+
+    // jx_ParVectorDestroy(residual);
+
+    t2 = jx_MPI_Wtime();
+    cpr->stage2_solve_time += t2 - t1;
+    
+    return JX_SUCCESS;
+}
+
+/*----------------------------------------------------------------*
+ *             工具函数实现                                       *
+ *----------------------------------------------------------------*/
+
+JX_Int JX_CPRGetStatistics(jx_CPRPrecond *cpr, JX_Real *stats)
+{
+    if (cpr == NULL || stats == NULL) return jx_error_flag;
+    
+    stats[0] = cpr->stage1_setup_time;
+    stats[1] = cpr->stage1_solve_time;
+    stats[2] = cpr->stage2_setup_time;
+    stats[3] = cpr->stage2_solve_time;
+    
+    return JX_SUCCESS;
+}
+
+JX_Int JX_CPRPrint(jx_CPRPrecond *cpr, JX_Int level)
+{
+    if (cpr == NULL) return jx_error_flag;
+    
+    if (level >= 1) {
+        jx_printf("\n=== CPR Preconditioner ===\n");
+        jx_printf("Pressure index: %d\n", cpr->pressure_index);
+        jx_printf("Block size: %d\n", cpr->block_size);
+        jx_printf("Stage1 maxit: %d, Stage2 maxit: %d\n", 
+                  cpr->stage1_maxit, cpr->stage2_maxit);
+        
+        if (level >= 2) {
+            jx_printf("Stage1 setup time: %.4f s\n", cpr->stage1_setup_time);
+            jx_printf("Stage1 solve time: %.4f s\n", cpr->stage1_solve_time);
+            jx_printf("Stage2 setup time: %.4f s\n", cpr->stage2_setup_time);
+            jx_printf("Stage2 solve time: %.4f s\n", cpr->stage2_solve_time);
+        }
+    }
+    
+    return JX_SUCCESS;
+}

@@ -1,0 +1,486 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include "mpi.h"
+#include "jx_mv.h"
+#include "jx_bsr_mv.h"
+#include "jx_parbsr_mv.h"
+#include "jx_parbilu.h"
+#include "bsr_block_ops.h"
+
+extern jx_BSRMatrix* jx_BSRMatrixMultiply(jx_BSRMatrix* A, jx_BSRMatrix* B);
+extern JX_Int jx_BSRMatrixPrint(jx_BSRMatrix* matrix, const char* file_name);
+extern JX_Int jx_BILUSetup(void *ilu_vdata, jx_ParBSRMatrix *A, jx_ParVector *f, jx_ParVector *u);
+
+static void print_matrix_info(const char* name, jx_BSRMatrix* A) {
+    int blk = jx_BSRMatrixBlockSize(A);
+    int nr  = jx_BSRMatrixNumRows(A);
+    int nc  = jx_BSRMatrixNumCols(A);
+    int nnz = jx_BSRMatrixNumNonzeros(A);
+    printf("  %s: %d x %d blocks, block_size=%d, block_nnz=%d, scalar_nnz=%d\n",
+           name, nr, nc, blk, nnz, nnz * blk * blk);
+}
+
+static double compute_frobenius_norm(jx_BSRMatrix* A) {
+    int blk = jx_BSRMatrixBlockSize(A);
+    int bnnz = blk * blk;
+    int nr = jx_BSRMatrixNumRows(A);
+
+    JX_Int* Ai = jx_BSRMatrixI(A);
+    JX_Real* Ad = jx_BSRMatrixData(A);
+
+    double nrm = 0.0;
+    for (int k = 0; k < Ai[nr]; k++)
+        for (int i = 0; i < bnnz; i++)
+            nrm += Ad[k * bnnz + i] * Ad[k * bnnz + i];
+    return sqrt(nrm);
+}
+
+static double compute_frobenius_diff(jx_BSRMatrix* A, jx_BSRMatrix* B) {
+    int blk = jx_BSRMatrixBlockSize(A);
+    int bnnz = blk * blk;
+    int nr = jx_BSRMatrixNumRows(A);
+    if (nr != jx_BSRMatrixNumRows(B)) return -1;
+
+    JX_Int* Ai = jx_BSRMatrixI(A);
+    JX_Int* Aj = jx_BSRMatrixJ(A);
+    JX_Real* Ad = jx_BSRMatrixData(A);
+
+    JX_Int* Bi = jx_BSRMatrixI(B);
+    JX_Int* Bj = jx_BSRMatrixJ(B);
+    JX_Real* Bd = jx_BSRMatrixData(B);
+
+    double diff = 0.0;
+    for (int r = 0; r < nr; r++) {
+        for (int k = Ai[r]; k < Ai[r + 1]; k++) {
+            int col = Aj[k];
+            int match = -1;
+            for (int s = Bi[r]; s < Bi[r + 1]; s++) {
+                if (Bj[s] == col) { match = s; break; }
+            }
+            if (match >= 0) {
+                for (int i = 0; i < bnnz; i++) {
+                    double d = Ad[k * bnnz + i] - Bd[match * bnnz + i];
+                    diff += d * d;
+                }
+            } else {
+                for (int i = 0; i < bnnz; i++)
+                    diff += Ad[k * bnnz + i] * Ad[k * bnnz + i];
+            }
+        }
+    }
+    return sqrt(diff);
+}
+
+static double compute_frobenius_diff_ldu(
+    jx_BSRMatrix* A, jx_BSRMatrix* L, jx_BSRMatrix* U,
+    const JX_Real* D_inv, int bnnz, int block_size)
+{
+    int nr = jx_BSRMatrixNumRows(A);
+    JX_Int* Ai = jx_BSRMatrixI(A);
+    JX_Int* Aj = jx_BSRMatrixJ(A);
+    JX_Real* Ad = jx_BSRMatrixData(A);
+    JX_Int* Li = jx_BSRMatrixI(L);
+    JX_Int* Lj = jx_BSRMatrixJ(L);
+    JX_Real* Ld = jx_BSRMatrixData(L);
+    JX_Int* Ui = jx_BSRMatrixI(U);
+    JX_Int* Uj = jx_BSRMatrixJ(U);
+    JX_Real* Ud = jx_BSRMatrixData(U);
+
+    double diff_sq = 0.0;
+    JX_Real* contrib = (JX_Real*)malloc(bnnz * sizeof(JX_Real));
+    JX_Real* d_data = (JX_Real*)malloc(nr * bnnz * sizeof(JX_Real));
+
+    /* Compute d_data = inv(D_inv) = current diagonal blocks */
+    for (int r = 0; r < nr; r++) {
+        JX_Real* out = d_data + r * bnnz;
+        const JX_Real* in = D_inv + r * bnnz;
+        for (int i = 0; i < bnnz; i++) out[i] = in[i];
+        jx_bsr_block_inv(out, block_size);
+    }
+
+    for (int r = 0; r < nr; r++) {
+        const JX_Real* d_r = d_data + r * bnnz;
+
+        for (int p = Ai[r]; p < Ai[r + 1]; p++) {
+            int c = Aj[p];
+
+            memset(contrib, 0, bnnz * sizeof(JX_Real));
+
+            /* diagonal: d_data[r] */
+            if (r == c) {
+                for (int i = 0; i < bnnz; i++) contrib[i] += d_r[i];
+            }
+
+            /* upper direct: d_data[r] * U[r][c] */
+            if (c > r) {
+                for (int q = Ui[r]; q < Ui[r + 1]; q++) {
+                    if (Uj[q] == c) {
+                        JX_Real temp[25];
+                        jx_bsr_block_matmul(d_r, Ud + q * bnnz, temp, block_size);
+                        for (int i = 0; i < bnnz; i++) contrib[i] += temp[i];
+                        break;
+                    }
+                }
+            }
+
+            /* lower direct + full path contributions:
+               L[r][k] * d_data[k] * U[k][c] for all k in Li[r] */
+            for (int q = Li[r]; q < Li[r + 1]; q++) {
+                int k = Lj[q];
+                if (k == c) {
+                    /* lower direct: L[r][c] * d_data[c] */
+                    const JX_Real* d_k = d_data + k * bnnz;
+                    JX_Real temp[25];
+                    jx_bsr_block_matmul(Ld + q * bnnz, d_k, temp, block_size);
+                    for (int i = 0; i < bnnz; i++) contrib[i] += temp[i];
+                } else if (k < c) {
+                    /* path: L[r][k] * d_data[k] * U[k][c] */
+                    const JX_Real* d_k = d_data + k * bnnz;
+                    JX_Real temp[25];
+                    jx_bsr_block_matmul(Ld + q * bnnz, d_k, temp, block_size);
+                    for (int s = Ui[k]; s < Ui[k + 1]; s++) {
+                        if (Uj[s] == c) {
+                            JX_Real temp2[25];
+                            jx_bsr_block_matmul(temp, Ud + s * bnnz, temp2, block_size);
+                            for (int i = 0; i < bnnz; i++) contrib[i] += temp2[i];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            const JX_Real* A_blk = Ad + p * bnnz;
+            for (int i = 0; i < bnnz; i++) {
+                double d = A_blk[i] - contrib[i];
+                diff_sq += d * d;
+            }
+        }
+    }
+
+    free(d_data);
+    free(contrib);
+    return sqrt(diff_sq);
+}
+
+/* Full reconstruction error over ALL n×n positions (including fill-in):
+   ||A - (I+L)*d_data*(I+U)||_F
+   where d_data = inv(D_inv) */
+static double compute_full_frobenius_error(
+    jx_BSRMatrix* A, jx_BSRMatrix* L, jx_BSRMatrix* U,
+    const JX_Real* D_inv, int bnnz, int block_size)
+{
+    int nr = jx_BSRMatrixNumRows(A);
+    JX_Int* Ai = jx_BSRMatrixI(A);
+    JX_Int* Aj = jx_BSRMatrixJ(A);
+    JX_Real* Ad = jx_BSRMatrixData(A);
+    JX_Int* Li = jx_BSRMatrixI(L);
+    JX_Int* Lj = jx_BSRMatrixJ(L);
+    JX_Real* Ld = jx_BSRMatrixData(L);
+    JX_Int* Ui = jx_BSRMatrixI(U);
+    JX_Int* Uj = jx_BSRMatrixJ(U);
+    JX_Real* Ud = jx_BSRMatrixData(U);
+
+    double diff_sq = 0.0;
+    JX_Real temp[25], temp2[25], contrib[25];
+    JX_Real* d_data = malloc(nr * bnnz * sizeof(JX_Real));
+
+    /* d_data = inv(D_inv) */
+    for (int r = 0; r < nr; r++) {
+        JX_Real* out = d_data + r * bnnz;
+        const JX_Real* in = D_inv + r * bnnz;
+        for (int i = 0; i < bnnz; i++) out[i] = in[i];
+        jx_bsr_block_inv(out, block_size);
+    }
+
+    for (int r = 0; r < nr; r++) {
+        const JX_Real* d_r = d_data + r * bnnz;
+
+        for (int c = 0; c < nr; c++) {
+            memset(contrib, 0, bnnz * sizeof(JX_Real));
+
+            /* k = r: I * d_data[r] * (I+U)[r][c] */
+            if (c == r) {
+                for (int i = 0; i < bnnz; i++) contrib[i] += d_r[i];
+            } else if (c > r) {
+                /* d_data[r] * U[r][c] (direct upper) */
+                for (int q = Ui[r]; q < Ui[r + 1]; q++) {
+                    if (Uj[q] == c) {
+                        jx_bsr_block_matmul(d_r, Ud + q * bnnz, temp, block_size);
+                        for (int i = 0; i < bnnz; i++) contrib[i] += temp[i];
+                        break;
+                    }
+                }
+            }
+
+            /* k < r: L[r][k] * d_data[k] * (I+U)[k][c] */
+            for (int q = Li[r]; q < Li[r + 1]; q++) {
+                int k = Lj[q];
+                if (k == c) {
+                    /* L[r][c] * d_data[c] (direct lower) */
+                    jx_bsr_block_matmul(Ld + q * bnnz, d_data + k * bnnz, temp, block_size);
+                    for (int i = 0; i < bnnz; i++) contrib[i] += temp[i];
+                } else if (k < c) {
+                    /* L[r][k] * d_data[k] * U[k][c] (fill-in path) */
+                    jx_bsr_block_matmul(Ld + q * bnnz, d_data + k * bnnz, temp, block_size);
+                    for (int s = Ui[k]; s < Ui[k + 1]; s++) {
+                        if (Uj[s] == c) {
+                            jx_bsr_block_matmul(temp, Ud + s * bnnz, temp2, block_size);
+                            for (int i = 0; i < bnnz; i++) contrib[i] += temp2[i];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            /* Compare with A[r][c] or 0 */
+            int found = 0;
+            for (int p = Ai[r]; p < Ai[r + 1]; p++) {
+                if (Aj[p] == c) {
+                    const JX_Real* A_blk = Ad + p * bnnz;
+                    for (int i = 0; i < bnnz; i++) {
+                        double d = A_blk[i] - contrib[i];
+                        diff_sq += d * d;
+                    }
+                    found = 1;
+                    break;
+                }
+            }
+            if (!found) {
+                /* fill-in or zero position */
+                for (int i = 0; i < bnnz; i++)
+                    diff_sq += contrib[i] * contrib[i];
+            }
+        }
+    }
+
+    free(d_data);
+    return sqrt(diff_sq);
+}
+
+int main(int argc, char** argv) {
+    MPI_Init(&argc, &argv);
+
+    int myid, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    if (argc < 2) {
+        if (myid == 0) {
+            printf("Usage: %s <matrix_file> [binary] [sweep]\n", argv[0]);
+            printf("  binary: 0=text, 1=binary (default: 0)\n");
+            printf("  sweep:  number of FGPBILU sweeps (default: 0)\n");
+        }
+        MPI_Finalize();
+        return 1;
+    }
+
+    char* filename = argv[1];
+    int binary = (argc > 2) ? atoi(argv[2]) : 0;
+    int sweep_val = (argc > 3) ? atoi(argv[3]) : 0;
+
+    jx_BSRMatrix* A_seq = NULL;
+    if (myid == 0) {
+        printf("Reading BSR matrix from %s (%s format)...\n\n",
+               filename, binary ? "binary" : "text");
+        A_seq = binary ? jx_BSRMatrixRead_Binary(filename)
+                       : jx_BSRMatrixRead(filename);
+        if (!A_seq) {
+            printf("Error: failed to read BSR matrix\n");
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+        print_matrix_info("A_seq", A_seq);
+    }
+
+    JX_BigInt* global_row_start = NULL;
+    JX_BigInt* global_col_start = NULL;
+    if (myid == 0) {
+        jx_GeneratePartitioning(jx_BSRMatrixNumRows(A_seq), size, &global_row_start);
+        jx_GeneratePartitioning(jx_BSRMatrixNumCols(A_seq), size, &global_col_start);
+    }
+
+    jx_ParBSRMatrix* A_par = jx_BSRMatrixToParBSRMatrix(
+        MPI_COMM_WORLD, A_seq, global_row_start, global_col_start);
+    if (!A_par) {
+        if (myid == 0) printf("Error: failed to distribute BSR matrix\n");
+        MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+    if (myid == 0) printf("\nMatrix distributed to %d processes\n", size);
+
+    void* ilu_data = jx_ILUCreate();
+    if (!ilu_data) {
+        if (myid == 0) printf("Error: jx_ILUCreate failed\n");
+        MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+
+    jx_ILUSetType(ilu_data, 3);
+    jx_ILUSetsweep(ilu_data, sweep_val);
+    jx_ILUSetLevelOfFill(ilu_data, 0);
+    jx_ILUSetMaxIter(ilu_data, 20);
+    jx_ILUSetTol(ilu_data, 1e-7);
+    jx_ILUSetPrintLevel(ilu_data, 2);
+    jx_ILUSetLogging(ilu_data, 1);
+    jx_ILUSetTriSolve(ilu_data, 1);
+
+    int blk_size  = jx_ParBSRMatrixBlockSize(A_par);
+    int glb_brows = jx_ParBSRMatrixGlobalNumRows(A_par);
+    int glb_srows = glb_brows * blk_size;
+
+    JX_Int *partitioning = NULL;
+    jx_ParBSRMatrixGetRowPartitioning(A_par, &partitioning);
+
+    jx_Vector *f_seq = NULL, *u_seq = NULL;
+    if (myid == 0) {
+        f_seq = jx_SeqVectorCreate(glb_srows);
+        jx_SeqVectorInitialize(f_seq);
+        JX_Real *fd = jx_VectorData(f_seq);
+        for (int i = 0; i < glb_srows; i++) fd[i] = 1.0;
+
+        u_seq = jx_SeqVectorCreate(glb_srows);
+        jx_SeqVectorInitialize(u_seq);
+        for (int i = 0; i < glb_srows; i++) jx_VectorData(u_seq)[i] = 0.0;
+    }
+
+    jx_ParVector *f_par = jx_VectorToParVector(MPI_COMM_WORLD, f_seq, partitioning);
+    jx_ParVector *u_par = jx_VectorToParVector(MPI_COMM_WORLD, u_seq, partitioning);
+    if (!f_par || !u_par) {
+        if (myid == 0) printf("Error: failed to create parallel vectors\n");
+        MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+
+    if (myid == 0) printf("\n--- FGPBILU Setup (sweep=%d) ---\n", sweep_val);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    double t0 = MPI_Wtime();
+    JX_Int ierr = jx_BILUSetup(ilu_data, A_par, f_par, u_par);
+    double t1 = MPI_Wtime();
+    if (ierr != 0) {
+        if (myid == 0) printf("Error: jx_BILUSetup failed with code %d\n", ierr);
+        MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+    if (myid == 0) printf("  Setup time: %.4f s\n", t1 - t0);
+
+    jx_ParBILUData* bilu = (jx_ParBILUData*)ilu_data;
+    jx_ParBSRMatrix* L_par = jx_ParILUDataMatL(bilu);
+    jx_ParBSRMatrix* U_par = jx_ParILUDataMatU(bilu);
+    jx_ParVector* D_array  = jx_ParILUDataD(bilu);
+
+    /* Each rank computes its local contribution; global results via MPI_Allreduce */
+    double global_frob_A_sq = 0.0;
+    double global_diag_err_sq = 0.0;
+    double global_diff_ldu_sq = -1.0;
+    double global_full_err_sq = -1.0;
+    double d_min_global = 1e300, d_max_global = 0.0;
+
+    if (L_par && U_par) {
+        jx_BSRMatrix* L_diag = jx_ParBSRMatrixDiag(L_par);
+        jx_BSRMatrix* U_diag = jx_ParBSRMatrixDiag(U_par);
+        jx_BSRMatrix* A_diag = jx_ParBSRMatrixDiag(A_par);
+
+        if (L_diag && U_diag) {
+            int bnnz = blk_size * blk_size;
+            int n_local = jx_BSRMatrixNumRows(L_diag);
+
+            /* Local squared Frobenius norm of A_diag */
+            double loc_frob_A = compute_frobenius_norm(A_diag);
+            global_frob_A_sq = loc_frob_A * loc_frob_A;
+
+            if (D_array) {
+                jx_Vector* D_local = jx_ParVectorLocalVector(D_array);
+                JX_Real* D_data = jx_VectorData(D_local);
+
+                /* D_inv stats (local min/max) — we'll reduce later */
+                for (int i = 0; i < n_local * bnnz; i++) {
+                    double av = fabs(D_data[i]);
+                    if (av > 0 && av < d_min_global) d_min_global = av;
+                    if (av > d_max_global) d_max_global = av;
+                }
+
+                /* Local ||A_diag - I||_F² */
+                {
+                    JX_Real* Adbg = jx_BSRMatrixData(A_diag);
+                    JX_Int*  A_ip = jx_BSRMatrixI(A_diag);
+                    JX_Int*  A_jp = jx_BSRMatrixJ(A_diag);
+                    double diag_err = 0.0;
+                    for (int r = 0; r < n_local; r++) {
+                        for (int p = A_ip[r]; p < A_ip[r + 1]; p++) {
+                            if (A_jp[p] == r) {
+                                for (int i = 0; i < blk_size; i++)
+                                    for (int j = 0; j < blk_size; j++) {
+                                        double want = (i == j) ? 1.0 : 0.0;
+                                        double d = Adbg[p * bnnz + i * blk_size + j] - want;
+                                        diag_err += d * d;
+                                    }
+                                break;
+                            }
+                        }
+                    }
+                    global_diag_err_sq = diag_err;
+                }
+
+                /* Local ||A - (I+L)*D_inv*U||_F² (A pattern only) */
+                double loc_diff = compute_frobenius_diff_ldu(
+                    A_diag, L_diag, U_diag, D_data, bnnz, blk_size);
+                global_diff_ldu_sq = loc_diff * loc_diff;
+
+                /* Local ||A - (I+L)*D_inv*U||_F² (full, incl. fill-in) */
+                double loc_full = compute_full_frobenius_error(
+                    A_diag, L_diag, U_diag, D_data, bnnz, blk_size);
+                global_full_err_sq = loc_full * loc_full;
+            }
+        }
+    }
+
+    /* Global MPI reductions */
+    MPI_Allreduce(MPI_IN_PLACE, &global_frob_A_sq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &global_diag_err_sq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    if (global_diff_ldu_sq >= 0)
+        MPI_Allreduce(MPI_IN_PLACE, &global_diff_ldu_sq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    if (global_full_err_sq >= 0)
+        MPI_Allreduce(MPI_IN_PLACE, &global_full_err_sq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &d_min_global, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &d_max_global, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
+    if (myid == 0 && L_par && U_par) {
+        double frob_A = sqrt(global_frob_A_sq);
+
+        printf("\n--- Factorization Summary ---\n");
+        print_matrix_info("L_diag", jx_ParBSRMatrixDiag(L_par));
+        print_matrix_info("U_diag", jx_ParBSRMatrixDiag(U_par));
+        printf("  Global ||A||_F = %.6e\n", frob_A);
+
+        /* L*U product (rank-0 local SpMM only, for reference) */
+        {
+            jx_BSRMatrix* L_diag = jx_ParBSRMatrixDiag(L_par);
+            jx_BSRMatrix* U_diag = jx_ParBSRMatrixDiag(U_par);
+            t0 = MPI_Wtime();
+            jx_BSRMatrix* LU = jx_BSRMatrixMultiply(L_diag, U_diag);
+            t1 = MPI_Wtime();
+            if (LU) {
+                print_matrix_info("L_diag * U_diag (no D)", LU);
+                printf("  SpMM time (rank 0): %.4f s\n", t1 - t0);
+                double frob_LU = compute_frobenius_norm(LU);
+                printf("  ||L*U||_F = %.6e  (ratio to ||A||_F = %.10e)\n",
+                       frob_LU, frob_LU / frob_A);
+                jx_BSRMatrixDestroy(LU);
+            }
+        }
+
+        if (D_array) {
+            printf("\n  D_inv stats: |min|=%6e, |max|=%6e\n", d_min_global, d_max_global);
+            printf("  ||A_diag - I||_F / ||A||_F: %.6e\n",
+                   sqrt(global_diag_err_sq) / frob_A);
+            printf("  ||A - (I+L)*D_inv*U||_F / ||A||_F: %.10e  (A pattern only)\n",
+                   sqrt(global_diff_ldu_sq) / frob_A);
+            printf("  ||A - (I+L)*D_inv*U||_F (full, incl. fill-in) / ||A||_F: %.10e\n",
+                   sqrt(global_full_err_sq) / frob_A);
+        } else {
+            printf("\n  Warning: D_array is NULL (no D factor available)\n");
+        }
+    }
+
+    if (myid == 0) printf("\nDone.\n");
+    MPI_Finalize();
+    return 0;
+}

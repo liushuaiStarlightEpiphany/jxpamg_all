@@ -1,0 +1,16 @@
+data/
+matrix/
+log/
+tmp/
+*.o
+*.zip
+*.bak
+solver
+test_bsr_cprbicgstab
+test_bsr_mv
+fix_*.py
+par_bilu_setup.o
+seq_bsr_matop.o
+bsr_test-old
+cpr_test-0602
+.vscode/
