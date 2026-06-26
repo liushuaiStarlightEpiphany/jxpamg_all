@@ -257,8 +257,8 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
     // 步骤1: 创建低精度工作向量（总是创建新的，避免内存问题）
     // =============================================================
     
-    jxf_ParVector *low_rhs = jxf_CreateGlobalVector(cpr->A_bsr);
-    jxf_ParVector *low_sol = jxf_CreateGlobalVector(cpr->A_bsr);
+    static jxf_ParVector *low_rhs = NULL, *low_sol = NULL;
+    if (!low_rhs) { low_rhs = jxf_CreateGlobalVector(cpr->A_bsr); low_sol = jxf_CreateGlobalVector(cpr->A_bsr); }
     
     if (low_rhs == NULL || low_sol == NULL) {
         printf("Failed to create low precision vectors\n");
@@ -274,8 +274,6 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
     JXF_Int convert_err = jxmp_ParVectorDtoF(par_rhs, low_rhs);
     if (convert_err != 0) {
         printf("Failed to convert RHS from double to float\n");
-        jxf_ParVectorDestroy(low_rhs);
-        jxf_ParVectorDestroy(low_sol);
         return jxf_error_flag;
     }
     
@@ -310,8 +308,6 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
                                           (JXF_Vector)cpr->xp);
         if (amg_result != JXF_SUCCESS) {
             printf("AMG solve failed\n");
-            jxf_ParVectorDestroy(low_rhs);
-            jxf_ParVectorDestroy(low_sol);
             return amg_result;
         }
     }
@@ -376,18 +372,7 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
     
     // 6.3 应用高精度块磨光
     if (cpr->print_level > 2) {
-        // 计算磨光前的残差（调试用）
-        jx_ParVector *high_temp = jx_ParVectorCreate(par_matrix->comm, global_scalar_rows, partitioning);
-        if (high_temp) {
-            jx_ParVectorInitialize(high_temp);
-            jx_ParVectorCopy(par_rhs, high_temp);
-            jx_ParBSRMatrixMatvec(-1.0, par_matrix, par_sol, 1.0, high_temp);
-            JX_Real res_before = jx_ParVectorNorm2(high_temp);
-            if (myid == 0) {
-                printf("CPR-MxP: Residual before polishing: %.6e\n", res_before);
-            }
-            jx_ParVectorDestroy(high_temp);
-        }
+
     }
     
     // 使用高精度块磨光函数
@@ -427,7 +412,7 @@ JXF_Int JXF_MxP_CPRPrecond1(jxf_CPRPrecond *cpr,
     // 步骤7: 清理高精度工作向量
     // =============================================================
     
-    if (high_work) jx_ParVectorDestroy(high_work);
+    // high_work static
     
     // 如果有需要，可以在这里添加额外的统计信息
     if (cpr->print_level > 0 && myid == 0) {
